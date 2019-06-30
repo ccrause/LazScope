@@ -19,7 +19,11 @@ type
     ChartToolset1PanDragTool1: TPanDragTool;
     ChartToolset1ZoomDragTool1: TZoomDragTool;
     ADCPortsList: TCheckGroup;
-    Label4: TLabel;
+    LabelX: TLabel;
+    LabelY: TLabel;
+    LabelXlbl: TLabel;
+    Label5: TLabel;
+    LabelYlbl: TLabel;
     SingleShotCheck: TCheckBox;
     Label2: TLabel;
     TriggerOptionsRadioBox: TRadioGroup;
@@ -38,8 +42,6 @@ type
       ATool: TChartTool; APoint: TPoint);
     procedure ChartToolset1DataPointCrosshairTool1Draw(
       ASender: TDataPointCrosshairTool);
-    procedure ChartToolset1ReticuleTool1BeforeMouseMove(ATool: TChartTool;
-      APoint: TPoint);
     procedure SingleShotCheckChange(Sender: TObject);
     procedure RunningCheckChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -141,13 +143,8 @@ begin
   p := Chart1.GraphToImage(ASender.Position);
 
   Chart1.Drawer.Ellipse(p.X - R, p.Y - R, p.X + R, p.Y + R);
-  Label4.Caption := format('%0.4f'#13'%d', [ASender.Position.X, round(ASender.Position.Y)]);
-end;
-
-procedure TForm1.ChartToolset1ReticuleTool1BeforeMouseMove(ATool: TChartTool;
-  APoint: TPoint);
-begin
-  Label4.Caption := IntToStr(APoint.X) + #13 + IntToStr(APoint.y);
+  LabelX.Caption := FloatToStrF(ASender.Position.X, ffFixed, 4, 3);
+  LabelY.Caption := IntToStr(round(ASender.Position.y));
 end;
 
 procedure TForm1.SingleShotCheckChange(Sender: TObject);
@@ -274,7 +271,6 @@ begin
 
   for i := 0 to length(data)-1 do
   begin
-    //checksum := checksum XOR buf[i];
     j := 3*(i shr 1) + (i mod 2);
 
     h := buf[j];

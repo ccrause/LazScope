@@ -1,19 +1,20 @@
 object Form1: TForm1
   Left = 313
-  Height = 553
+  Height = 519
   Top = 255
-  Width = 825
+  Width = 879
   Caption = 'Lazarus Oscilloscope'
-  ClientHeight = 553
-  ClientWidth = 825
+  ClientHeight = 519
+  ClientWidth = 879
   OnClose = FormClose
   OnShow = FormShow
+  Position = poDesktopCenter
   Visible = True
   object Chart1: TChart
     Left = 0
-    Height = 402
+    Height = 368
     Top = 64
-    Width = 825
+    Width = 879
     AxisList = <    
       item
         Grid.Color = 4210752
@@ -53,8 +54,8 @@ object Form1: TForm1
   object StatusBar1: TStatusBar
     Left = 0
     Height = 25
-    Top = 528
-    Width = 825
+    Top = 494
+    Width = 879
     Panels = <    
       item
         Alignment = taRightJustify
@@ -154,8 +155,8 @@ object Form1: TForm1
   object ADCPortsList: TCheckGroup
     Left = 0
     Height = 62
-    Top = 466
-    Width = 825
+    Top = 432
+    Width = 879
     Align = alBottom
     AutoFill = True
     Caption = 'Analog port to measure'
@@ -168,7 +169,7 @@ object Form1: TForm1
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 8
     ClientHeight = 44
-    ClientWidth = 823
+    ClientWidth = 877
     Columns = 8
     Items.Strings = (
       'A0'
@@ -242,12 +243,49 @@ object Form1: TForm1
     OnChange = SingleShotCheckChange
     TabOrder = 8
   end
-  object Label4: TLabel
-    Left = 744
+  object LabelXlbl: TLabel
+    Left = 752
     Height = 17
-    Top = 16
-    Width = 119
-    Caption = 'Press ALT for reticule'
+    Hint = 'Press ALT for reticule'
+    Top = 23
+    Width = 17
+    Caption = 'X - '
+    ParentColor = False
+  end
+  object Label5: TLabel
+    Left = 752
+    Height = 17
+    Hint = 'Press ALT for reticule'
+    Top = 2
+    Width = 44
+    Caption = 'Reticule'
+    ParentColor = False
+  end
+  object LabelYlbl: TLabel
+    Left = 752
+    Height = 17
+    Hint = 'Press ALT for reticule'
+    Top = 38
+    Width = 17
+    Caption = 'Y - '
+    ParentColor = False
+  end
+  object LabelX: TLabel
+    Left = 780
+    Height = 17
+    Hint = 'Press ALT for reticule'
+    Top = 23
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object LabelY: TLabel
+    Left = 780
+    Height = 17
+    Hint = 'Press ALT for reticule'
+    Top = 38
+    Width = 7
+    Caption = '0'
     ParentColor = False
   end
   object ChartToolset1: TChartToolset
