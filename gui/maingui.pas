@@ -362,7 +362,9 @@ begin
   SerialThread.PullData(buf);
 
   if AskForNewData and not singleShot then
-    SerialThread.SetCommand(cmdSendData);
+    SerialThread.SetCommand(cmdSendData)
+  else
+    RunningCheck.Checked := false;
 
   epTimer.Stop(PreviousFrameTime);
   StatusBar1.Panels[3].Text := FloatToStrF(epTimer.Elapsed(PreviousFrameTime)*1000, ffGeneral, 4, 3);
