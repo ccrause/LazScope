@@ -77,7 +77,7 @@ begin
     while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
     lowbyte := ADCL;
     hibyte := ADCH;
-    v1 := (word(hibyte) shl 8) or lowbyte;   // NOTE - sneaky typecast required!!!!!!!
+    v1 := (word(hibyte) shl 8) or lowbyte;   // NOTE - typecast required
     if (triggerCheck = nil) or triggerCheck(v1, v2) then
       Break;
   until (i > rollovercount);
