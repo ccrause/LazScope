@@ -200,12 +200,16 @@ begin
 
   ADCScalerSelector.ItemIndex := 3;
   cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
-  TimeFrame := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
   SerialThread.SetCommand(cmd);
+  // Estimate of time scale
+  TimeFrame := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
 
   // Sync ADC prescaler with Arduino
   ADCPortsList.Checked[0] := true;
   CheckSelectedADCPorts;
+
+  // Sync ADC trigger with GUI
+  TriggerOptionsRadioBoxClick(nil);
 
   Chart1.Extent.YMin := 0;
   Chart1.Extent.YMax := 1024;
@@ -305,8 +309,12 @@ begin
 
   TimeFrame := t / 1000;  // convert to milliseconds
   StatusBar1.Panels[1].Text := FloatToStrF(TimeFrame, ffFixed, 3, 2);
-  Chart1.Extent.XMax := TimeFrame ;//ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
 
+  // Set Extent to some sensible rounded value
+  if TimeFrame < 10 then
+    Chart1.Extent.XMax := round((TimeFrame*10) + 0.5) / 10
+  else
+    Chart1.Extent.XMax := round(TimeFrame + 0.5);
 
   // Check checksum:
   checksum := checksum XOR buf[j + 4];
