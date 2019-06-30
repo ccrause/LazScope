@@ -83,11 +83,16 @@ begin
   begin
     recv := FSynaSer.RecvBufferEx(@FData[0], bufsize, 2000);
     if recv < bufsize then // retry for remaining data
-      recv := FSynaSer.RecvBufferEx(@FData[recv], (bufsize - recv), 2000);
+      recv := recv + FSynaSer.RecvBufferEx(@FData[recv], (bufsize - recv), 2000);
 
     if (FSynaSer.LastError = ErrTimeout) then
     begin
       FErrorMessage := 'Comms timeout';
+      Synchronize(@PushError);
+    end
+    else if recv < bufsize then
+    begin
+      FErrorMessage := 'Data buffer underflow';
       Synchronize(@PushError);
     end
     else
