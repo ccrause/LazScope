@@ -31,6 +31,6 @@ A decent quality trace of the two signals.
 ![](images/50Hz_sine_500Hz_squarex32.png)
 
 ### 50 Hz sine wave + 500 Hz square wave sampled at x8 prescaler
-A poor quality trace caused by to high a sampling frequency. At too high sampling frequencies the ADC charge capacitor cannot be fully charged/discharged between sample cycles, leading to smearing samples.  In this case the alternating sampling caused channel A0 to affect A2's reading and visa versa.
+A poor quality trace caused by to high a sampling frequency. At too high sampling frequencies the ADC charge capacitor cannot be fully charged/discharged between sample cycles, leading to smearing of samples.  In this case the alternating sampling caused channel A0 to affect A2's reading and visa versa.
 ![](images/50Hz_sine_500Hz_squarex8.png)
 
