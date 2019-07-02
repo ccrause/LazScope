@@ -18,6 +18,8 @@ A square wave signal of 500 Hz is generated on PD3/Arduino D3 pin. Very handy if
 ## Software
 The GUI consist of a display thread (main thread) and a serial thread to handle asynchronous communication with the firmware.  The general communication protocol is based on a request/response model, with the main thread sending requests to the serial thread, which dispatches a single message and wait for a response.  If the request doesn't return data, the command itself is echoed back.  When a user selects an option, the main thread will post a message to a command queue in the serial thread.  If the serial thread receives a data packet it is stored in raw format in a temporary buffer in the serial thread.  A message is posted to the main form to flag data availability.  The main thread will then unpack the data, extract the time for the data packet and perform a checksum test to detect data consistency errors.
 
+A reticule ("crosshair") tool is available which will snap to the nearest data point and display its coordinates.  Activate this by pressing the Alt button while moving the mouse cursor.
+ 
 ### TODO
 The serial port and baud rate is currently hardcoded - must put this in the GUI so user can configure this!!!
 
