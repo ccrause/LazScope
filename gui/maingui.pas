@@ -13,12 +13,15 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    connectButton: TButton;
     Chart1: TChart;
     ChartToolset1: TChartToolset;
     ChartToolset1DataPointCrosshairTool1: TDataPointCrosshairTool;
     ChartToolset1PanDragTool1: TPanDragTool;
     ChartToolset1ZoomDragTool1: TZoomDragTool;
     ADCPortsList: TCheckGroup;
+    Label4: TLabel;
+    SerialComboBox: TComboBox;
     LabelX: TLabel;
     LabelY: TLabel;
     LabelXlbl: TLabel;
@@ -42,6 +45,7 @@ type
       ATool: TChartTool; APoint: TPoint);
     procedure ChartToolset1DataPointCrosshairTool1Draw(
       ASender: TDataPointCrosshairTool);
+    procedure connectButtonClick(Sender: TObject);
     procedure SingleShotCheckChange(Sender: TObject);
     procedure RunningCheckChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -85,7 +89,13 @@ implementation
 { TForm1 }
 
 uses
-  synaser, TACustomSeries, TAChartUtils;
+  synaser, TACustomSeries, TAChartUtils,
+  serial,
+  {$IFDEF UNIX}
+  termio, BaseUnix, errors;
+  {$ELSE}
+  windows;
+  {$ENDIF}
 
 const
   LineColors: array[0..7] of TColor =
@@ -93,6 +103,100 @@ const
 
   ScanFrames: array[0..6] of double =
     (5.75, 6.68, 10.36, 17.75, 35.3, 66.1, 132);
+
+
+////////////////////////////////////////////////////////////////////////
+  {$IFDEF MSWINDOWS}
+  function GetSerialPortNames: string;
+  var
+    reg: TRegistry;
+    l, v: TStringList;
+    n: integer;
+  begin
+    l := TStringList.Create;
+    v := TStringList.Create;
+    reg := TRegistry.Create;
+    try
+  {$IFNDEF VER100}
+  {$IFNDEF VER120}
+      reg.Access := KEY_READ;
+  {$ENDIF}
+  {$ENDIF}
+      reg.RootKey := HKEY_LOCAL_MACHINE;
+      reg.OpenKey('\HARDWARE\DEVICEMAP\SERIALCOMM', false);
+      reg.GetValueNames(l);
+      for n := 0 to l.Count - 1 do
+        v.Add(reg.ReadString(l[n]));
+      Result := v.CommaText;
+    finally
+      reg.Free;
+      l.Free;
+      v.Free;
+    end;
+  end;
+  {$ENDIF}
+  {$IFNDEF MSWINDOWS}
+  // Idea copied from PascalSCADA project's serialport.pas file:
+  // http://pascalscada.svn.sourceforge.net/viewvc/pascalscada/trunk/serialport.pas?revision=702&view=markup
+  // More prefixes exist see e.g. :
+  // http://comments.gmane.org/gmane.comp.ide.lazarus.general/46750
+
+  {$IFDEF UNIX}
+  var
+    {$IFDEF LINUX}
+    PortPrefix: array[0..1] of string = ({'ttyS',} 'ttyUSB', 'ttyACM');  // Possibly several other names too
+    {$ENDIF}
+    {$IFDEF FREEBSD}
+    PortPrefix:array[0..2] of string = ('cuad', 'cuau', 'ttyu'); // http://www.freebsd.org/doc/handbook/serial.html
+    {$ENDIF}
+    {$IFDEF NETBSD}
+    PortPrefix:array[0..0] of string = ('cuad');  // Don't have better info at the moment
+    {$ENDIF}
+    {$IFDEF OPENBSD}
+    PortPrefix:array[0..0] of string = ('cuad');  // Don't have better info at the moment
+    {$ENDIF}
+  {$ENDIF}
+
+  function GetSerialPortNames: string;
+  var
+    i, j: Integer;
+    sl: TStringList;
+    sr : TSearchRec;
+    f: TSerialHandle;
+    val: integer;
+    tio: Termios;
+    ser: TSerialStruct;
+  begin
+    Result := '';
+    sl := TStringList.Create;
+    try
+      for i := 0 to high(PortPrefix) do
+        if FindFirst('/dev/' + PortPrefix[i] + '*', LongInt($FFFFFFFF), sr) = 0 then  // from patch
+        begin
+          repeat
+            if (sr.Attr and $FFFFFFFF) = Sr.Attr then
+            begin
+              begin
+                f := FpOpen('/dev/'+sr.Name, O_RDWR or O_NOCTTY or O_NONBLOCK);
+                if f <> 0 then
+                begin
+                  val := FpIOCtl(f, TIOCGSERIAL, @ser);
+                  if (val <> -1) then
+                    sl.Add('/dev/' + sr.Name);
+                  SerClose(f);
+                end;
+              end;
+            end;
+          until FindNext(sr) <> 0;
+        end;
+    finally
+      FindClose(sr);
+      Result := sl.CommaText;
+      sl.Free;
+    end;
+  end;
+  {$ENDIF}
+////////////////////////////////////////////////////////////
 
 function CalcDataBufferSize(const SampleCount: integer): integer;
 begin
@@ -147,6 +251,53 @@ begin
   LabelY.Caption := IntToStr(round(ASender.Position.y));
 end;
 
+procedure TForm1.connectButtonClick(Sender: TObject);
+var
+  cmd: byte;
+begin
+  if SerialComboBox.Text <> '' then
+  begin
+    if not assigned(SerialThread) then
+    begin
+      SerialThread := TSerialInterface.Create(False);
+      AskForNewData := false;
+      SerialThread.OnErrorNotify := @self.Status;
+    end;
+
+    SerialThread.SetCommand(cmdSampleCount);
+    repeat
+      Sleep(10);
+    until SerialThread.NumSamples > 0;
+
+    numsamples := SerialThread.NumSamples;
+    bufsize := CalcDataBufferSize(numsamples);
+    SetLength(buf, bufsize);
+    SetLength(data, numsamples);
+
+    ADCScalerSelector.ItemIndex := 3;
+    cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
+    SerialThread.SetCommand(cmd);
+    // Estimate of time scale
+    TimeFrame := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
+
+    // Sync ADC prescaler with Arduino
+    ADCPortsList.Checked[0] := true;
+    CheckSelectedADCPorts;
+
+    // Sync ADC trigger with GUI
+    TriggerOptionsRadioBoxClick(nil);
+
+    // Enable GUI elements
+    RunningCheck.Enabled := true;
+    SingleShotCheck.Enabled := true;
+    ADCScalerSelector.Enabled := true;
+    ADCPortsList.Enabled := true;
+    ReferenceVoltageSelector.Enabled := true;
+    TriggerOptionsRadioBox.Enabled := true;
+    TriggerLevelEdit.Enabled := true;
+  end;
+end;
+
 procedure TForm1.SingleShotCheckChange(Sender: TObject);
 begin
   singleShot :=  SingleShotCheck.Checked;
@@ -161,12 +312,15 @@ end;
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
   running := false;
-  SerialThread.Terminate;
-  SerialThread.SetCommand(0);  // Need to wake thread if asleep / waiting for command
-
-  while not SerialThread.Done do
+  if Assigned(SerialThread) then
   begin
-    Application.ProcessMessages;
+    SerialThread.Terminate;
+    SerialThread.SetCommand(0);  // Need to wake thread if asleep / waiting for command
+
+    while not SerialThread.Done do
+    begin
+      Application.ProcessMessages;
+    end;
   end;
 end;
 
@@ -178,46 +332,16 @@ begin
   if epTimer.HWCapabilityDataAvailable then
     epTimer.TimebaseSource:= HardwareTimebase;
 
-  if not assigned(SerialThread) then
-  begin
-    SerialThread := TSerialInterface.Create(False);
-    AskForNewData := false;
-    SerialThread.OnErrorNotify := @self.Status;
-  end;
-
-  SerialThread.SetCommand(cmdSampleCount);
-  repeat
-    Sleep(10);
-  until SerialThread.NumSamples > 0;
-
-  numsamples := SerialThread.NumSamples;
-  bufsize := CalcDataBufferSize(numsamples);
-  SetLength(buf, bufsize);
-  SetLength(data, numsamples);
-
-  ADCScalerSelector.ItemIndex := 3;
-  cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
-  SerialThread.SetCommand(cmd);
-  // Estimate of time scale
-  TimeFrame := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
-
-  // Sync ADC prescaler with Arduino
-  ADCPortsList.Checked[0] := true;
-  CheckSelectedADCPorts;
-
-  // Sync ADC trigger with GUI
-  TriggerOptionsRadioBoxClick(nil);
+  SerialComboBox.Items.CommaText := GetSerialPortNames;
 
   Chart1.Extent.YMin := 0;
   Chart1.Extent.YMax := 1024;
   Chart1.Extent.UseYMin := true;
   Chart1.Extent.UseYMax := true;
-
   Chart1.Extent.XMin := 0;
   Chart1.Extent.XMax := TimeFrame;
   Chart1.Extent.UseXMin := true;
   Chart1.Extent.UseXMax := true;
-
   Chart1.BottomAxis.Title.Caption := 'Time - ms';
   Chart1.BottomAxis.Title.Visible := true;
 end;

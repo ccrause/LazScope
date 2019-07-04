@@ -1,20 +1,20 @@
 object Form1: TForm1
   Left = 313
-  Height = 519
+  Height = 494
   Top = 255
-  Width = 879
+  Width = 1050
   Caption = 'Lazarus Oscilloscope'
-  ClientHeight = 519
-  ClientWidth = 879
+  ClientHeight = 494
+  ClientWidth = 1050
   OnClose = FormClose
   OnShow = FormShow
   Position = poDesktopCenter
   Visible = True
   object Chart1: TChart
     Left = 0
-    Height = 368
+    Height = 343
     Top = 64
-    Width = 879
+    Width = 1050
     AxisList = <    
       item
         Grid.Color = 4210752
@@ -54,8 +54,8 @@ object Form1: TForm1
   object StatusBar1: TStatusBar
     Left = 0
     Height = 25
-    Top = 494
-    Width = 879
+    Top = 469
+    Width = 1050
     Panels = <    
       item
         Alignment = taRightJustify
@@ -96,6 +96,7 @@ object Form1: TForm1
     Height = 29
     Top = 22
     Width = 114
+    Enabled = False
     ItemHeight = 0
     ItemIndex = 3
     Items.Strings = (
@@ -132,6 +133,7 @@ object Form1: TForm1
     Height = 29
     Top = 22
     Width = 115
+    Enabled = False
     ItemHeight = 0
     ItemIndex = 0
     Items.Strings = (
@@ -149,14 +151,15 @@ object Form1: TForm1
     Top = 8
     Width = 69
     Caption = 'Running'
+    Enabled = False
     OnChange = RunningCheckChange
     TabOrder = 4
   end
   object ADCPortsList: TCheckGroup
     Left = 0
     Height = 62
-    Top = 432
-    Width = 879
+    Top = 407
+    Width = 1050
     Align = alBottom
     AutoFill = True
     Caption = 'Analog port to measure'
@@ -169,8 +172,9 @@ object Form1: TForm1
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 8
     ClientHeight = 44
-    ClientWidth = 877
+    ClientWidth = 1048
     Columns = 8
+    Enabled = False
     Items.Strings = (
       'A0'
       'A1'
@@ -193,6 +197,7 @@ object Form1: TForm1
     Height = 27
     Top = 22
     Width = 88
+    Enabled = False
     Increment = 4
     MaxValue = 1024
     OnChange = TriggerOptionsRadioBoxClick
@@ -217,6 +222,7 @@ object Form1: TForm1
     ClientHeight = 33
     ClientWidth = 244
     Columns = 3
+    Enabled = False
     ItemIndex = 0
     Items.Strings = (
       'None'
@@ -240,6 +246,7 @@ object Form1: TForm1
     Top = 32
     Width = 83
     Caption = 'SingleShot'
+    Enabled = False
     OnChange = SingleShotCheckChange
     TabOrder = 8
   end
@@ -286,6 +293,31 @@ object Form1: TForm1
     Top = 38
     Width = 7
     Caption = '0'
+    ParentColor = False
+  end
+  object SerialComboBox: TComboBox
+    Left = 847
+    Height = 29
+    Top = 22
+    Width = 113
+    ItemHeight = 0
+    TabOrder = 9
+  end
+  object connectButton: TButton
+    Left = 968
+    Height = 25
+    Top = 23
+    Width = 75
+    Caption = 'Connect'
+    OnClick = connectButtonClick
+    TabOrder = 10
+  end
+  object Label4: TLabel
+    Left = 848
+    Height = 17
+    Top = 2
+    Width = 58
+    Caption = 'Serial port'
     ParentColor = False
   end
   object ChartToolset1: TChartToolset
