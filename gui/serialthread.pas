@@ -38,8 +38,9 @@ type
   public
     NumSamples: integer;
 
-    constructor Create(CreateSuspended: Boolean;
-                       const StackSize: SizeUInt = DefaultStackSize);
+    constructor Create(fSerialPortName: string; fBaudRate: integer);
+    //CreateSuspended: Boolean;
+                       //const StackSize: SizeUInt = DefaultStackSize);
 
     // Called by main thread to get new copy of data
     procedure PullData(var data: TDataBuffer);
@@ -156,18 +157,17 @@ begin
   FDone := true;
 end;
 
-constructor TSerialInterface.Create(CreateSuspended: Boolean;
-  const StackSize: SizeUInt);
+constructor TSerialInterface.Create(fSerialPortName: string; fBaudRate: integer);
 begin
-  inherited Create(CreateSuspended, StackSize);
+  inherited Create(false);
   FDone := false;
   NumSamples := 0;
 
   FSynaSer := TBlockSerial.Create;
   FSynaSer.RaiseExcept := true;
   FSynaSer.LinuxLock := false;  // makes debugging & crash recovery a little easier
-  FSynaSer.Connect('/dev/ttyACM0');
-  FSynaSer.Config(500000, 8, 'N', 1, false, false);
+  FSynaSer.Connect(fSerialPortName);
+  FSynaSer.Config(fBaudRate, 8, 'N', 1, false, false);
 
   // Looks like basic setup is working, disable exceptions
   FSynaSer.RaiseExcept := false;

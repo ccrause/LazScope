@@ -13,30 +13,33 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
-    connectButton: TButton;
+    ADCPortsList: TCheckGroup;
+    ADCScalerSelector: TComboBox;
+    BaudEdit: TEdit;
     Chart1: TChart;
     ChartToolset1: TChartToolset;
     ChartToolset1DataPointCrosshairTool1: TDataPointCrosshairTool;
     ChartToolset1PanDragTool1: TPanDragTool;
     ChartToolset1ZoomDragTool1: TZoomDragTool;
-    ADCPortsList: TCheckGroup;
-    Label4: TLabel;
-    SerialComboBox: TComboBox;
-    LabelX: TLabel;
-    LabelY: TLabel;
-    LabelXlbl: TLabel;
-    Label5: TLabel;
-    LabelYlbl: TLabel;
-    SingleShotCheck: TCheckBox;
-    Label2: TLabel;
-    TriggerOptionsRadioBox: TRadioGroup;
-    RunningCheck: TCheckBox;
-    ReferenceVoltageSelector: TComboBox;
-    Label3: TLabel;
-    ADCScalerSelector: TComboBox;
+    connectButton: TButton;
     Label1: TLabel;
-    TriggerLevelEdit: TSpinEdit;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    LabelX: TLabel;
+    LabelXlbl: TLabel;
+    LabelY: TLabel;
+    LabelYlbl: TLabel;
+    Panel1: TPanel;
+    ReferenceVoltageSelector: TComboBox;
+    RunningCheck: TCheckBox;
+    SerialComboBox: TComboBox;
+    SingleShotCheck: TCheckBox;
     StatusBar1: TStatusBar;
+    TriggerLevelEdit: TSpinEdit;
+    TriggerOptionsRadioBox: TRadioGroup;
     procedure ADCPortsListClick(Sender: TObject);
     procedure ADCPortsListItemClick(Sender: TObject; Index: integer);
     procedure ChartToolset1DataPointCrosshairTool1AfterKeyUp(ATool: TChartTool;
@@ -254,12 +257,16 @@ end;
 procedure TForm1.connectButtonClick(Sender: TObject);
 var
   cmd: byte;
+  baud: integer;
 begin
-  if SerialComboBox.Text <> '' then
+  baud := StrToInt(BaudEdit.Text);
+  if (SerialComboBox.Text <> '') and (baud > 0) then
   begin
+    connectButton.Enabled := false;
     if not assigned(SerialThread) then
     begin
-      SerialThread := TSerialInterface.Create(False);
+      SerialThread := TSerialInterface.Create(SerialComboBox.Text, baud);
+
       AskForNewData := false;
       SerialThread.OnErrorNotify := @self.Status;
     end;
