@@ -239,9 +239,9 @@ object Form1: TForm1
       }
     end
     object ReferenceVoltageSelector: TComboBox
-      Left = 8
+      Left = 115
       Height = 29
-      Top = 280
+      Top = 288
       Width = 99
       Enabled = False
       ItemHeight = 0
@@ -256,25 +256,25 @@ object Form1: TForm1
       Text = 'Vcc'
     end
     object Label3: TLabel
-      Left = 8
+      Left = 115
       Height = 17
-      Top = 256
+      Top = 264
       Width = 101
       Caption = 'Reference voltage'
       ParentColor = False
     end
     object Label1: TLabel
-      Left = 139
+      Left = 8
       Height = 17
-      Top = 256
+      Top = 264
       Width = 81
       Caption = 'ADC prescaler'
       ParentColor = False
     end
     object ADCScalerSelector: TComboBox
-      Left = 139
+      Left = 8
       Height = 29
-      Top = 280
+      Top = 288
       Width = 82
       Enabled = False
       ItemHeight = 0
