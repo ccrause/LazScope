@@ -5,7 +5,7 @@ unit SerialThread;
 interface
 
 uses
-  Classes, Synaser, Types;
+  Classes, serialobject, Types;
 
 type
   TDataBuffer = TByteDynArray;
@@ -16,7 +16,7 @@ type
   TSerialInterface = class(TThread)
   private
     FCmdBuffer: TFPList;
-    FSynaSer: TBlockSerial;
+    FSerial: TSerialObj;
     FData: TDataBuffer;
     FErrorMessage: string;
     FError: TStatusNotify;
@@ -58,9 +58,7 @@ implementation
 uses
   mainGUI, LCLintf, Commands, SysUtils;
 
-
 { TSerialInterface }
-
 
 procedure TSerialInterface.FlagDataAvailable;
 begin
@@ -75,18 +73,18 @@ end;
 
 procedure TSerialInterface.SendCommandWaitForResponse(const cmd: byte);
 var
-  reply: byte;
+  reply, v1, v2: byte;
   recv: integer;
 begin
-  FSynaSer.SendByte(cmd);
+  FSerial.Write(cmd);
 
   if cmd = cmdSendData then
   begin
-    recv := FSynaSer.RecvBufferEx(@FData[0], bufsize, 2000);
+    recv := FSerial.ReadTimeout(FData[0], bufsize, 2000);
     if recv < bufsize then // retry for remaining data
-      recv := recv + FSynaSer.RecvBufferEx(@FData[recv], (bufsize - recv), 2000);
+      recv := recv + FSerial.ReadTimeout(FData[recv], (bufsize - recv), 2000);
 
-    if (FSynaSer.LastError = ErrTimeout) then
+    if (recv < bufsize) then
     begin
       FErrorMessage := 'Comms timeout';
       Synchronize(@PushError);
@@ -101,13 +99,15 @@ begin
   end
   else if (cmd = cmdSampleCount) then // also resize internal data buffer
   begin
-    NumSamples := FSynaSer.RecvByte(500);
-    NumSamples := NumSamples + (FSynaSer.RecvByte(500) shl 8);
+    FSerial.ReadByteTimeout(v1, 500);
+    FSerial.ReadByteTimeout(v2, 500);
+
+    NumSamples := v1 + (v2 shl 8);
     SetLength(FData, CalcDataBufferSize(NumSamples));
   end
   else
   begin
-    reply := FSynaSer.RecvByte(1000);
+    reply := FSerial.ReadByteTimeout(reply, 500);
     if (reply XOR cmd) <> 0 then   // echo mismatch
     begin
       FErrorMessage := 'Invalid reply echo';
@@ -121,12 +121,12 @@ var
   cmd: byte;
 begin
   // Make sure Arduino is running by sending 0, should just echo 0.
-  FSynaSer.SendByte(0);
-  FSynaSer.RecvByte(500);
+  FSerial.Write(0);
+  FSerial.ReadByteTimeout(cmd, 500);
 
-  if FSynaSer.LastError <> sOK then
+  if (cmd <> 0) then
   begin
-    FErrorMessage := FSynaSer.LastErrorDesc;
+    FErrorMessage := 'Unexpected reply from serial';
     Synchronize(@PushError);
   end;
 
@@ -153,7 +153,7 @@ begin
     // Now wait for next event
     RTLeventWaitFor(FWaitingToProceed);
   end;
-  FSynaser.Free;
+  FSerial.Free;
   FDone := true;
 end;
 
@@ -164,14 +164,8 @@ begin
   FDone := false;
   NumSamples := 0;
 
-  FSynaSer := TBlockSerial.Create;
-  FSynaSer.RaiseExcept := true;
-  FSynaSer.LinuxLock := false;  // makes debugging & crash recovery a little easier
-  FSynaSer.Connect(fSerialPortName);
-  FSynaSer.Config(fBaudRate, 8, 'N', 1, false, false);
-
-  // Looks like basic setup is working, disable exceptions
-  FSynaSer.RaiseExcept := false;
+  FSerial := TSerialObj.Create;
+  FSerial.OpenPort(fSerialPortName, fBaudRate);
 
   FWaitingToProceed := RTLEventCreate;
   FCmdBuffer := TFPList.Create;
