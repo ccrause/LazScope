@@ -160,6 +160,7 @@ end;
 constructor TSerialInterface.Create(fSerialPortName: string; fBaudRate: integer);
 begin
   inherited Create(false);
+  System.InitCriticalSection(rcSection);
   FDone := false;
   NumSamples := 0;
 
