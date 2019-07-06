@@ -97,7 +97,7 @@ uses
   {$IFDEF UNIX}
   termio, BaseUnix, errors;
   {$ELSE}
-  windows;
+  registry, windows;
   {$ENDIF}
 
 const
@@ -228,14 +228,14 @@ end;
 procedure TForm1.ChartToolset1DataPointCrosshairTool1AfterKeyUp(
   ATool: TChartTool; APoint: TPoint);
 begin
-  Unused(ATool, APoint);
+  TAChartUtils.Unused(ATool, APoint);
   ChartToolset1DataPointCrosshairTool1.Hide;
 end;
 
 procedure TForm1.ChartToolset1DataPointCrosshairTool1AfterMouseMove(
   ATool: TChartTool; APoint: TPoint);
 begin
-  Unused(ATool, APoint);
+  TAChartUtils.Unused(ATool, APoint);
   Chart1.SetFocus;
 end;
 
