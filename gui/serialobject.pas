@@ -65,7 +65,7 @@ uses
   {$IFDEF UNIX}
   termio, BaseUnix, errors;
   {$ELSE}
-  windows, sysutils, registry, classes;
+  windows, registry, classes;
   {$ENDIF}
 
 { Translated from include/linux/serial.h }
