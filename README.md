@@ -19,9 +19,6 @@ A square wave signal of 500 Hz is generated on PD3/Arduino D3 pin. Very handy if
 The GUI consist of a display thread (main thread) and a serial thread to handle asynchronous communication with the firmware.  The general communication protocol is based on a request/response model, with the main thread sending requests to the serial thread, which dispatches a single message and wait for a response.  If the request doesn't return data, the command itself is echoed back.  When a user selects an option, the main thread will post a message to a command queue in the serial thread.  If the serial thread receives a data packet it is stored in raw format in a temporary buffer in the serial thread.  A message is posted to the main form to flag data availability.  The main thread will then unpack the data, extract the time for the data packet and perform a checksum test to detect data consistency errors.
 
 A reticule ("crosshair") tool is available which will snap to the nearest data point and display its coordinates.  Activate this by pressing the Alt button while moving the mouse cursor.
- 
-### TODO
-The serial port and baud rate is currently hardcoded - must put this in the GUI so user can configure this!!!
 
 ## Examples
 Some signals were generated on a signal generator similar to this one (https://scienceprog.com/avr-dds-signal-generator-v20/)
@@ -31,6 +28,6 @@ A decent quality trace of the two signals.
 ![](images/50Hz_sine_500Hz_squarex32.png)
 
 ### 50 Hz sine wave + 500 Hz square wave sampled at x8 prescaler
-A poor quality trace caused by to high a sampling frequency. At too high sampling frequencies the ADC charge capacitor cannot be fully charged/discharged between sample cycles, leading to smearing of samples.  In this case the alternating sampling caused channel A0 to affect A2's reading and visa versa.
+A poor quality trace caused by to high a sampling frequency. At too high sampling frequencies the ADC charge capacitor cannot be fully charged/discharged between sample cycles, leading to smearing of samples.  In this case the alternating sampling caused channel A0 to affect A1's reading and visa versa.
 ![](images/50Hz_sine_500Hz_squarex8.png)
 
