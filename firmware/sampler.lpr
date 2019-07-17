@@ -1,16 +1,29 @@
 program sampler;
 
 uses
-  intrinsics, commands;
+  intrinsics, commands, uart;
 
 const
+  {$ifdef CPUAVR5}
   samples = 1200; // careful, large values will clash with stack!
+  {$else}
+  samples = 120;
+  {$endif}
   // 3 bytes per 2 samples + 2 bytes per odd sample
   BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
+
+  // ADC ADMUX constants - different for atmega/attiny
+  ADCVoltageVcc = {$ifdef CPUAVR5}4{$else}0{$endif};
+  ADCVoltage1_1 = {$ifdef CPUAVR5}12{$else}8{$endif};
+  ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif};
 
 type
   TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
   TDataBuf = array[0..BUFSIZE-1] of byte;
+
+  TWordAsBytes = packed record
+    l, h: byte;
+  end;
 
 var
   databuf: TDataBuf; //array[0..BUFSIZE-1] of byte;  // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
@@ -25,6 +38,10 @@ var
   channels: array[0..7] of byte;
   ADMUXVector: array[0..7] of byte;
   numChannels: uint8;
+
+  {$ifndef CPUAVR5}
+  timerOverflow: byte;
+  {$endif}
 
 // Returns next selected ADC channel, wraps around
 procedure nextPortChannel(var nextID: byte); inline;
@@ -46,17 +63,35 @@ begin
   Result := (value1 <= triggerlevel) and (value2 > triggerlevel);
 end;
 
+{$ifndef CPUAVR5}
+procedure Timer1Overflow; interrupt; public name 'TIMER1_OVF_ISR';
+begin
+  inc(timerOverflow);
+end;
+{$endif}
+
 procedure startTimer;
 begin
+{$ifdef CPUAVR5}
   TCCR1A := 0;  // Default state anyway, just set to make sure
-  TCNT1 := 0;  // reset counter
   TCCR1B := (1 shl 2{CS12}); // 256 prescaler, TCNT1 can run up to ~ 65535 with a freq of 16000000/256 = 625000 Hz, will overflow after ~ 1.048 seconds
+{$else}
+  timerOverflow := 0;
+  TCCR1 := (1 shl 3{CS13}); // 128 prescaler, TCNT1 can run up to 255 with a freq of 8000000/128 = 625000 Hz. Data width = 255 / 62500 = 4.08 ms
+  TIMSK := 1 shl TOIE1;
+{$endif}
+  TCNT1 := 0;  // reset counter
 end;
 
 function stopGetTimeMicros: uint32;
 begin
+{$ifdef CPUAVR5}
   TCCR1B := 0;
-  result := uint32(TCNT1) shl 4;  // 256 / F_CPU = 0.000 016 s per tick, or 16 microseconds
+  result := uint32(TCNT1) shl 4;  // 256 / F_CPU = 0.000 016 s per tick, or 16 microseconds also 128 / 8 MHz
+{$else}
+  TCCR1 := 0;
+  result := (uint32(TCNT1) + uint32(timerOverflow) shl 8) shl 4;
+{$endif}
 end;
 
 // Read ADC and pack data buffer
@@ -65,7 +100,6 @@ var
   nextChannelIndex: byte = 0;
   lowbyte, hibyte: byte;
   v1, v2, i, j: word;
-  done: boolean;
 begin
   v1 := triggerInit;
   i := 0;
@@ -77,6 +111,8 @@ begin
     while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
     lowbyte := ADCL;
     hibyte := ADCH;
+    //TWordAsBytes(v1).h := hibyte;
+    //TWordAsBytes(v1).l := lowbyte;
     v1 := (word(hibyte) shl 8) or lowbyte;   // NOTE - typecast required
     if (triggerCheck = nil) or triggerCheck(v1, v2) then
       Break;
@@ -89,7 +125,7 @@ begin
   while i < samples-1 do
   begin
     ADMUX := ADMUXVector[nextChannelIndex];
-    ADCSRA := ADCSRA or $40; // start the conversion
+    ADCSRA := ADCSRA or (1 shl ADSC); // start the conversion
 
     nextPortChannel(nextChannelIndex);
     j := i + (i div 2);
@@ -134,39 +170,6 @@ begin
     ADMUXVector[i] := (ADMUXhi shl 4) + channels[i];
 end;
 
-procedure uartInit(const UBRR: word);
-begin
-  UBRR0H := UBRR shr 8;
-  UBRR0L := byte(UBRR);
-
-  // Set U2X bit
-  UCSR0A := UCSR0A or (1 shl U2X0);
-
-  // Enable receiver and transmitter
-  UCSR0B := (1 shl RXEN0) or (1 shl TXEN0);
-
-  // Set frame format: 8data, 1stop bit, no parity
-  UCSR0C := (3 shl UCSZ0);
-end;
-
-procedure uartTransmit(const data: byte);
-begin
-  // Wait for empty transmit buffer
-  while ((UCSR0A and (1 shl UDRE0)) = 0) do;
-
-  // Put data into buffer, sends the data
-  UDR0 := data;
-end;
-
-function uartReceive: byte;
-begin
-  // Wait for data to be received
-  while ((UCSR0A and (1 shl RXC0)) = 0) do;
-
-  // Get and return received data from buffer
-  result := UDR0;
-end;
-
 procedure uartWriteBuffer(constref data: TDataBuf);
 var
   i: uint16;
@@ -177,30 +180,36 @@ end;
 
 procedure init();
 begin
-  DDRB := 1 shl 5;  // pin 13 set to output
-  PORTB := 0;  // pin 13 low
+  //DDRB := 1 shl 5;  // pin 13 set to output
+  //PORTB := 0;  // pin 13 low
 
   //uart_init1(500000, true);
+  {$ifdef CPUAVR5}
   uartInit(3);  // baud rate of 500000 @ 16 MHz
+  {$else}
+  uartInit();   // Fixed baud rate, see BAUDRATE const in uart.pas
+  {$endif}
   avr_sei;
 
   ADCSRA := $86;
-  ADMUXhi := 4; //B0100; // Vcc + left adjust
+  ADMUXhi := ADCVoltageVcc; // Vcc + left adjust
 
   // Set up A0 as default selected channels
-  channels[0] := 0;  // A0
+  channels[0] := {$ifdef CPUAVR5}0{$else}1{$endif};  // on attiny ADC0 is on reset pin, so generally not used
   numChannels := 1;
   updateADMUXVector; // splice together ADMUXhi and channels
 
-  // Disable digital input on all analog pins to save power
-  DIDR0 := 63;
+  // Disable digital input on all input analog pins to save power
+  DIDR0 := {$ifdef CPUAVR5}63{$else}(1 shl ADC1D) or (1 shl ADC2D) or (1 shl ADC3D){$endif};
   triggerCheck := nil;
 
   // Setup timer2 PWM on PD3 / D3 @ 0.5 kHz
+  {$ifdef CPUAVR5}
   DDRD := (1 shl 3);
   TCCR2A := (1 shl 4) or (1 shl 1);  // Toggle OC2B & timer mode 2 (CTC)
   TCCR2B := 5;   // prescaler = 128
   OCR2A := 124;  // 16000000 / 128 / 125 = 1 kHz
+  {$endif}
 end;
 
 // Mostly handle ADC options
@@ -221,17 +230,17 @@ begin
    // Reference voltage
     cmdADCVoltage_VCC:
       begin
-        ADMUXhi := 4;  // Vcc
+        ADMUXhi := ADCVoltageVcc;  // Vcc
         updateADMUXVector();
       end;
     cmdADCVoltage_1_1:
       begin
-        ADMUXhi := 12;  // 1.1 V
+        ADMUXhi := ADCVoltage1_1;  // 1.1 V
         updateADMUXVector();
       end;
     cmdADCVoltage_AREF:
       begin
-        ADMUXhi := 0;  // Aref pin
+        ADMUXhi := ADCVoltageARev;// Aref pin
         updateADMUXVector();
       end;
 
