@@ -7,7 +7,7 @@ const
   {$ifdef CPUAVR5}
   samples = 1200; // careful, large values will clash with stack!
   {$else}
-  samples = 120;
+  samples = 124;
   {$endif}
   // 3 bytes per 2 samples + 2 bytes per odd sample
   BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
@@ -16,6 +16,10 @@ const
   ADCVoltageVcc = {$ifdef CPUAVR5}4{$else}0{$endif};
   ADCVoltage1_1 = {$ifdef CPUAVR5}12{$else}8{$endif};
   ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif};
+
+  // On atmega328p DIP only ADC0-5 are available
+  // On attinyx5 ADC0 is reset and ADC1 is square wave signal, so ADC2-3 are available
+  MaxADCChannels = {$ifdef CPUAVR5}5{$else}2{$endif};
 
 type
   TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
@@ -27,7 +31,7 @@ type
 
 var
   databuf: TDataBuf; //array[0..BUFSIZE-1] of byte;  // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
-  time: uint32; // Duration of a data frame in 16 microsend ticks
+  time: uint32 = 0; // Duration of a data frame in 16 microsend ticks
   ADMUXhi: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
@@ -35,8 +39,8 @@ var
   rollovercount: uint16 = samples; // continue if trigger didn't fire after so many counts
   triggerInit: word;  // value used to ensure first trigger check is untrue, eliminates a boolean check
 
-  channels: array[0..7] of byte;
-  ADMUXVector: array[0..7] of byte;
+  channels: array[0..MaxADCChannels-1] of byte;
+  ADMUXVector: array[0..MaxADCChannels-1] of byte;
   numChannels: uint8;
 
   {$ifndef CPUAVR5}
@@ -64,13 +68,32 @@ begin
 end;
 
 {$ifndef CPUAVR5}
-procedure Timer1Overflow; interrupt; public name 'TIMER1_OVF_ISR';
-begin
-  inc(timerOverflow);
+// Although nostackframe is specified, a stack frame is allocated anyway
+// thus skip own stack frame code
+// 3 byte stack (excl. PC)
+// 30 bytes code
+procedure Timer1Overflow; interrupt; public name 'TIMER1_OVF_ISR'; assembler; nostackframe;
+asm
+  //push r0
+  //in   r0, 0x3f
+  //push r0
+  lds  r0, timerOverflow;
+  inc  r0
+  sts  timerOverflow, r0
+  //pop r0
+  //out 0x3f, r0
+  //pop r0
 end;
+
+// 8 bytes stack (excl. PC)
+// 58 bytes code
+//procedure Timer1Overflow; interrupt; public name 'TIMER1_OVF_ISR';
+//begin
+//  inc(timerOverflow);
+//end;
 {$endif}
 
-procedure startTimer;
+procedure startTimer; inline;
 begin
 {$ifdef CPUAVR5}
   TCCR1A := 0;  // Default state anyway, just set to make sure
@@ -83,7 +106,7 @@ begin
   TCNT1 := 0;  // reset counter
 end;
 
-function stopGetTimeMicros: uint32;
+function stopGetTimeMicros: uint32; inline;
 begin
 {$ifdef CPUAVR5}
   TCCR1B := 0;
@@ -111,9 +134,9 @@ begin
     while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
     lowbyte := ADCL;
     hibyte := ADCH;
-    //TWordAsBytes(v1).h := hibyte;
-    //TWordAsBytes(v1).l := lowbyte;
-    v1 := (word(hibyte) shl 8) or lowbyte;   // NOTE - typecast required
+    TWordAsBytes(v1).h := hibyte;
+    TWordAsBytes(v1).l := lowbyte;
+    //v1 := (word(hibyte) shl 8) or lowbyte;   // NOTE - typecast required
     if (triggerCheck = nil) or triggerCheck(v1, v2) then
       Break;
   until (i > rollovercount);
@@ -178,12 +201,8 @@ begin
     uartTransmit(data[i]);
 end;
 
-procedure init();
+procedure init();  inline;
 begin
-  //DDRB := 1 shl 5;  // pin 13 set to output
-  //PORTB := 0;  // pin 13 low
-
-  //uart_init1(500000, true);
   {$ifdef CPUAVR5}
   uartInit(3);  // baud rate of 500000 @ 16 MHz
   {$else}
@@ -195,12 +214,12 @@ begin
   ADMUXhi := ADCVoltageVcc; // Vcc + left adjust
 
   // Set up A0 as default selected channels
-  channels[0] := {$ifdef CPUAVR5}0{$else}1{$endif};  // on attiny ADC0 is on reset pin, so generally not used
+  channels[0] := {$ifdef CPUAVR5}0{$else}2{$endif};  // on attiny ADC0 is on reset pin, so generally not used
   numChannels := 1;
   updateADMUXVector; // splice together ADMUXhi and channels
 
   // Disable digital input on all input analog pins to save power
-  DIDR0 := {$ifdef CPUAVR5}63{$else}(1 shl ADC1D) or (1 shl ADC2D) or (1 shl ADC3D){$endif};
+  DIDR0 := {$ifdef CPUAVR5}63{$else}(1 shl ADC2D) or (1 shl ADC3D){$endif};
   triggerCheck := nil;
 
   // Setup timer2 PWM on PD3 / D3 @ 0.5 kHz
@@ -209,17 +228,25 @@ begin
   TCCR2A := (1 shl 4) or (1 shl 1);  // Toggle OC2B & timer mode 2 (CTC)
   TCCR2B := 5;   // prescaler = 128
   OCR2A := 124;  // 16000000 / 128 / 125 = 1 kHz
+  {$else}
+  DDRB := DDRB or (1 shl 0);        // PB0 - pin 5
+  TCCR0A := (1 shl 6) or (1 shl 1); // toggle OC0A & CTC mode
+  TCCR0B := (1 shl 1) or (1 shl 0); // prescaler = 64
+  OCR0A := 124; // 8000000 / 64 / 125 = 1 kHz
   {$endif}
 end;
 
-// Mostly handle ADC options
-procedure SetADCOptions(cmd: byte);
+procedure readSerialCmds;  inline;
 var
-  i: byte;
+  cmd: byte;
+  checksum: byte = 0;
+  i: uint16;
 begin
+  cmd := uartReceive();
+
   case cmd of
     // ADC pins (PC0..PC5 for atmega328p, PB1..PB3 for attiny}
-    cmdADCPins: cmd := {$ifdef CPUAVR5}%00111111{$else}%00001110{$endif};
+    cmdADCPins: cmd := {$ifdef CPUAVR5}%00111111{$else}%00001100{$endif};
     // ADC prescaler selection
     cmdADCDiv2  : ADCSRA := $81;
     cmdADCDiv4  : ADCSRA := $82;
@@ -246,6 +273,24 @@ begin
         updateADMUXVector();
       end;
 
+    cmdSendData:
+      begin
+        gatherData();
+        databuf[BUFSIZE - 5] := time shr 24;
+        databuf[BUFSIZE - 4] := (time and $00FF0000) shr 16;
+        databuf[BUFSIZE - 3] := (time and $0000FF00) shr 8;
+        databuf[BUFSIZE - 2] := time and $000000FF;
+
+        checksum := 0;
+        for i := 0 to BUFSIZE-2 do
+          checksum := checksum xor databuf[i];
+
+        databuf[BUFSIZE-1] := checksum;
+
+        uartWriteBuffer(databuf);
+        exit; // no further return data required;
+      end;
+
     // Return number of samples in buffer
     cmdSampleCount:
       begin
@@ -267,7 +312,7 @@ begin
 
     cmdTriggerFalling:
       begin
-        uartTransmit(cmd);  // Trigger of falling edge
+        uartTransmit(cmd);  // Trigger on falling edge
         triggerCheck := @checkTriggerFalling;
         cmd := uartReceive();  // trigger value divided by 4
         triggerlevel := word(cmd) shl 2;
@@ -283,7 +328,7 @@ begin
         for i := 0 to 7 do
         begin
           ADMUXVector[i] := ADMUXhi shl 4;
-          if (cmd and (1 shl i)) > 0 then
+          if ((cmd and (1 shl i)) > 0) and (numChannels < MaxADCChannels-1) then
           begin
             inc(numChannels);
             channels[numChannels-1] := i;
@@ -294,35 +339,6 @@ begin
   end;
   // Echo command back to show it is completed
   uartTransmit(cmd);
-end;
-
-
-procedure readSerialCmds;
-var
-  c: byte;
-  checksum: byte = 0;
-  i: uint16;
-begin
-  c := uartReceive();
-
-  if (c = cmdSendData) then
-  begin
-    gatherData();
-    databuf[BUFSIZE - 5] := time shr 24;
-    databuf[BUFSIZE - 4] := (time and $00FF0000) shr 16;
-    databuf[BUFSIZE - 3] := (time and $0000FF00) shr 8;
-    databuf[BUFSIZE - 2] := time and $000000FF;
-
-    checksum := 0;
-    for i := 0 to BUFSIZE-2 do
-      checksum := checksum xor databuf[i];
-
-    databuf[BUFSIZE-1] := checksum;
-
-    uartWriteBuffer(databuf);
-  end
-  else // Set ADC division factor
-    SetADCOptions(c);
 end;
 
 begin

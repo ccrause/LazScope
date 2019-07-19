@@ -54,10 +54,11 @@ end;
 const
   BAUDRATE = 115200;
   RXBufferSize = 4;
-  PB0 = 0;  // RX
-  PB1 = 1;  // TX
-  TXPin = PB1;
-  RXPin = PB0;
+  PB0 = 0;
+  PB1 = 1;
+  PB2 = 2;
+  TXPin = PB2;
+  RXPin = PB1;
 
 var
   RXBuffer: array[1..RXBufferSize] of byte;
