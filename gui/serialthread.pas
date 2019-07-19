@@ -36,7 +36,7 @@ type
   protected
     procedure Execute; override;
   public
-    NumSamples: integer;
+    SerialReturnValue: integer;
 
     constructor Create(fSerialPortName: string; fBaudRate: integer);
     //CreateSuspended: Boolean;
@@ -102,12 +102,18 @@ begin
     FSerial.ReadByteTimeout(v1, 500);
     FSerial.ReadByteTimeout(v2, 500);
 
-    NumSamples := v1 + (v2 shl 8);
-    SetLength(FData, CalcDataBufferSize(NumSamples));
+    SerialReturnValue := v1 + (v2 shl 8);
+    SetLength(FData, CalcDataBufferSize(SerialReturnValue));
+  end
+  else if (cmd = cmdADCPins) then
+  begin
+    FSerial.ReadByteTimeout(v1, 500);
+    SerialReturnValue := v1;
   end
   else
   begin
-    reply := FSerial.ReadByteTimeout(reply, 500);
+    reply := 255;
+    FSerial.ReadByteTimeout(reply, 500);
     if (reply XOR cmd) <> 0 then   // echo mismatch
     begin
       FErrorMessage := 'Invalid reply echo';
@@ -162,7 +168,7 @@ begin
   inherited Create(false);
   System.InitCriticalSection(rcSection);
   FDone := false;
-  NumSamples := 0;
+  SerialReturnValue := 0;
 
   FSerial := TSerialObj.Create;
   FSerial.OpenPort(fSerialPortName, fBaudRate);
@@ -172,7 +178,7 @@ begin
   FCmdBuffer.Capacity := 16;     // should not accumulate this many commands anyway
 
   // Arduino resets on serial connect, so wait a short while
-  Sleep(1000);
+  Sleep(500);
 end;
 
 procedure TSerialInterface.PullData(var data: TDataBuffer);

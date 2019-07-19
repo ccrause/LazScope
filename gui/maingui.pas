@@ -157,7 +157,7 @@ end;
 procedure TForm1.connectButtonClick(Sender: TObject);
 var
   cmd: byte;
-  baud: integer;
+  baud, i: integer;
 begin
   baud := StrToInt(BaudEdit.Text);
   if (SerialComboBox.Text <> '') and (baud > 0) then
@@ -171,12 +171,14 @@ begin
       SerialThread.OnErrorNotify := @self.Status;
     end;
 
+    SerialThread.SerialReturnValue := 0;
     SerialThread.SetCommand(cmdSampleCount);
     repeat
       Sleep(10);
-    until SerialThread.NumSamples > 0;
+      Application.ProcessMessages;
+    until SerialThread.SerialReturnValue > 0;
 
-    numsamples := SerialThread.NumSamples;
+    numsamples := SerialThread.SerialReturnValue;
     bufsize := CalcDataBufferSize(numsamples);
     SetLength(buf, bufsize);
     SetLength(data, numsamples);
@@ -186,6 +188,21 @@ begin
     SerialThread.SetCommand(cmd);
     // Estimate of time scale
     TimeFrame := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
+
+    SerialThread.SerialReturnValue := 0;
+    SerialThread.SetCommand(cmdADCPins);
+    repeat
+      Sleep(10);
+      Application.ProcessMessages;
+    until SerialThread.SerialReturnValue > 0;
+
+    ADCPortsList.Items.Clear;
+    cmd := SerialThread.SerialReturnValue;
+    for i := 0 to 7 do
+    begin
+      if (cmd and (1 shl i)) > 0 then
+        ADCPortsList.Items.Add(IntToStr(i));
+    end;
 
     // Sync ADC prescaler with Arduino
     ADCPortsList.Checked[0] := true;
@@ -406,7 +423,7 @@ end;
 
 procedure TForm1.CheckSelectedADCPorts;
 var
-  i: integer;
+  i, offset: integer;
   PortsSelected: byte;
   newLineSeries: TLineSeries;
   sl: TStringList;
@@ -415,10 +432,11 @@ begin
   numPortsSelected := 0;
   sl := TStringList.Create;
 
+  offset := StrToInt(ADCPortsList.Items[0]);
   for i := 0 to ADCPortsList.Items.Count-1 do
     if ADCPortsList.Checked[i] then
     begin
-      PortsSelected := PortsSelected + (1 shl i);
+      PortsSelected := PortsSelected + (1 shl (i+offset));
       inc(numPortsSelected);
       sl.Add(copy(ADCPortsList.Items[i], 1, 2));
     end;

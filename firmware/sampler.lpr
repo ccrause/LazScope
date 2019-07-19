@@ -218,6 +218,8 @@ var
   i: byte;
 begin
   case cmd of
+    // ADC pins (PC0..PC5 for atmega328p, PB1..PB3 for attiny}
+    cmdADCPins: cmd := {$ifdef CPUAVR5}%00111111{$else}%00001110{$endif};
     // ADC prescaler selection
     cmdADCDiv2  : ADCSRA := $81;
     cmdADCDiv4  : ADCSRA := $82;
