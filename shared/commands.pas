@@ -15,7 +15,10 @@ const
   {$endif not CPUAVR}
 
   // Main thread waiting
-  cmdWaiting: byte = 0;
+  cmdWaiting: byte     = 0;
+
+  // ADC pins - bitpacked as byte
+  cmdADCPins           = 10;
 
   // Select frame width option
   cmdADCDiv2           = 20;
