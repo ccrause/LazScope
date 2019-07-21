@@ -238,13 +238,6 @@ begin
 
     out PORTB+(-32), r20
     brne TxLoop                 // loop until r24 is zero
-
-    // Prevent high nibble of SREG to read as $E
-    // This ends up in r0 because FPC uses r0 to manipulate SREG
-    // When gdb requests target registers (rsp command g), the content of r0 is the first value as response
-    // If this response start with E, gdb interprets it as an error
-    // Clear T flag - prevents SREG from reading $Ex
-    bst r0, 0
   end;
   avr_sei;
   DDRB := DDRB and not(1 shl TXPin);  // Input, switch to output only when pushing data
