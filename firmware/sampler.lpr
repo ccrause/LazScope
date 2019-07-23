@@ -51,7 +51,7 @@ var
 procedure nextPortChannel(var nextID: byte); inline;
 begin
   inc(nextID);
-  if ((numChannels - nextID) = 0) then
+  if (nextID >= numChannels) then
     nextID := 0;
 end;
 
@@ -236,10 +236,10 @@ begin
   {$endif}
 end;
 
-procedure readSerialCmds;  inline;
+procedure readSerialCmds; inline;
 var
   cmd: byte;
-  checksum: byte = 0;
+  b: byte = 0;
   i: uint16;
 begin
   cmd := uartReceive();
@@ -281,11 +281,11 @@ begin
         databuf[BUFSIZE - 3] := (time and $0000FF00) shr 8;
         databuf[BUFSIZE - 2] := time and $000000FF;
 
-        checksum := 0;
+        b := 0;
         for i := 0 to BUFSIZE-2 do
-          checksum := checksum xor databuf[i];
+          b := b xor databuf[i];
 
-        databuf[BUFSIZE-1] := checksum;
+        databuf[BUFSIZE-1] := b;
 
         uartWriteBuffer(databuf);
         exit; // no further return data required;
@@ -325,14 +325,13 @@ begin
         uartTransmit(cmd); // All non-data request commands should be echoed
         cmd := uartReceive();
         numChannels := 0;
-        for i := 0 to 7 do
+        for b := 0 to 7 do
         begin
-          ADMUXVector[i] := ADMUXhi shl 4;
-          if ((cmd and (1 shl i)) > 0) and (numChannels < MaxADCChannels-1) then
+          if ((cmd and (1 shl b)) > 0) and (numChannels < MaxADCChannels-1) then
           begin
             inc(numChannels);
-            channels[numChannels-1] := i;
-            ADMUXVector[numChannels-1] := ADMUXVector[numChannels-1] or channels[numChannels-1];
+            channels[numChannels-1] := b;
+            ADMUXVector[numChannels-1] := (ADMUXhi shl 4) or channels[numChannels-1];
           end;
         end;
       end;
