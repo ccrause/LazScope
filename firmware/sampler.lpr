@@ -4,22 +4,26 @@ uses
   intrinsics, commands, uart;
 
 const
+  // careful, large values will clash with stack!
   {$ifdef CPUAVR5}
-  samples = 1200; // careful, large values will clash with stack!
-  {$else}
+  samples = 1200;
+  {$elseif FPC_SRAMSIZE = 256}
   samples = 124;
+  {$elseif FPC_SRAMSIZE = 128}
+  samples = 10;
   {$endif}
   // 3 bytes per 2 samples + 2 bytes per odd sample
   BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
 
-  // ADC ADMUX constants - different for atmega/attiny
-  ADCVoltageVcc = {$ifdef CPUAVR5}4{$else}0{$endif};
-  ADCVoltage1_1 = {$ifdef CPUAVR5}12{$else}8{$endif};
-  ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif};
+  // ADC ADMUX constants mask - different for atmega/attiny
+  ADCVoltageVcc  = {$ifdef CPUAVR5}4{$else}0{$endif} shl 4;
+  ADCVoltage1_1  = {$ifdef CPUAVR5}12{$else}8{$endif} shl 4;
+  ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif} shl 4;
 
-  // On atmega328p DIP only ADC0-5 are available
+  // On atmega328p DIP and attinyx4 only ADC0-5 are available
   // On attinyx5 ADC0 is reset and ADC1 is square wave signal, so ADC2-3 are available
-  MaxADCChannels = {$ifdef CPUAVR5}5{$else}2{$endif};
+  MaxADCChannels = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+                   5{$else}2{$endif};
 
 type
   TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
@@ -32,18 +36,17 @@ type
 var
   databuf: TDataBuf; //array[0..BUFSIZE-1] of byte;  // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
   time: uint32 = 0; // Duration of a data frame in 16 microsend ticks
-  ADMUXhi: uint8;  // hi nibble of the ADMUX register
+  ADMUXhiMask: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
   triggerlevel: uint16 = 512;  // Trigger threshold
   rollovercount: uint16 = samples; // continue if trigger didn't fire after so many counts
   triggerInit: word;  // value used to ensure first trigger check is untrue, eliminates a boolean check
 
-  channels: array[0..MaxADCChannels-1] of byte;
   ADMUXVector: array[0..MaxADCChannels-1] of byte;
   numChannels: uint8;
 
-  {$ifndef CPUAVR5}
+  {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
   timerOverflow: byte;
   {$endif}
 
@@ -67,7 +70,7 @@ begin
   Result := (value1 <= triggerlevel) and (value2 > triggerlevel);
 end;
 
-{$ifndef CPUAVR5}
+{$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
 // Although nostackframe is specified, a stack frame is allocated anyway
 // thus skip own stack frame code
 // 3 byte stack (excl. PC)
@@ -95,9 +98,12 @@ end;
 
 procedure startTimer; inline;
 begin
-{$ifdef CPUAVR5}
+{$if defined(CPUAVR5)}
   TCCR1A := 0;  // Default state anyway, just set to make sure
   TCCR1B := (1 shl 2{CS12}); // 256 prescaler, TCNT1 can run up to ~ 65535 with a freq of 16000000/256 = 625000 Hz, will overflow after ~ 1.048 seconds
+{$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+  TCCR1A := 0;  // Default state anyway, just set to make sure
+  TCCR1B := (3 shl 0); // 64 prescaler, TCNT1 can run up to ~ 65535 with a freq of 8000000/64 = 125000 Hz, will overflow after ~ 0.524 seconds
 {$else}
   timerOverflow := 0;
   TCCR1 := (1 shl 3{CS13}); // 128 prescaler, TCNT1 can run up to 255 with a freq of 8000000/128 = 625000 Hz. Data width = 255 / 62500 = 4.08 ms
@@ -108,9 +114,12 @@ end;
 
 function stopGetTimeMicros: uint32; inline;
 begin
-{$ifdef CPUAVR5}
+{$if defined(CPUAVR5)}
   TCCR1B := 0;
   result := uint32(TCNT1) shl 4;  // 256 / F_CPU = 0.000 016 s per tick, or 16 microseconds also 128 / 8 MHz
+{$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+  TCCR1B := 0;
+  result := uint32(TCNT1) shl 3;  // 64 / F_CPU = 0.000 008 s per tick, or 8 microseconds
 {$else}
   TCCR1 := 0;
   result := (uint32(TCNT1) + uint32(timerOverflow) shl 8) shl 4;
@@ -136,8 +145,9 @@ begin
     hibyte := ADCH;
     TWordAsBytes(v1).h := hibyte;
     TWordAsBytes(v1).l := lowbyte;
-    //v1 := (word(hibyte) shl 8) or lowbyte;   // NOTE - typecast required
-    if (triggerCheck = nil) or triggerCheck(v1, v2) then
+    // No trigger function for low RAM controllers, else code doesn't fit
+    //{$if FPC_SRAMSIZE > 128}
+    if (triggerCheck = nil) or triggerCheck(v1, v2) then //{$endif}
       Break;
   until (i > rollovercount);
 
@@ -190,7 +200,7 @@ var
   i: byte;
 begin
   for i := 0 to numChannels-1 do
-    ADMUXVector[i] := (ADMUXhi shl 4) + channels[i];
+    ADMUXVector[i] := ADMUXhiMask or (ADMUXVector[i] and $0F);// + channels[i];
 end;
 
 procedure uartWriteBuffer(constref data: TDataBuf);
@@ -211,26 +221,33 @@ begin
   avr_sei;
 
   ADCSRA := $86;
-  ADMUXhi := ADCVoltageVcc; // Vcc + left adjust
+  ADMUXhiMask := ADCVoltageVcc; // Vcc + left adjust
 
   // Set up A0 as default selected channels
-  channels[0] := {$ifdef CPUAVR5}0{$else}2{$endif};  // on attiny ADC0 is on reset pin, so generally not used
+  ADMUXVector[0] := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+                 0 {$else} 2 {$endif};  // on attiny ADC0 is on reset pin, so generally not used
   numChannels := 1;
-  updateADMUXVector; // splice together ADMUXhi and channels
+  updateADMUXVector; // splice together ADMUXhiMask and channels
 
   // Disable digital input on all input analog pins to save power
-  DIDR0 := {$ifdef CPUAVR5}63{$else}(1 shl ADC2D) or (1 shl ADC3D){$endif};
+  DIDR0 := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+           63{$else}(1 shl ADC2D) or (1 shl ADC3D){$endif};
   triggerCheck := nil;
 
   // Setup timer2 PWM on PD3 / D3 @ 0.5 kHz
-  {$ifdef CPUAVR5}
+  {$if defined(CPUAVR5) }
   DDRD := (1 shl 3);
   TCCR2A := (1 shl 4) or (1 shl 1);  // Toggle OC2B & timer mode 2 (CTC)
   TCCR2B := 5;   // prescaler = 128
   OCR2A := 124;  // 16000000 / 128 / 125 = 1 kHz
-  {$else}
+  {$elseif defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
   DDRB := DDRB or (1 shl 0);        // PB0 - pin 5
   TCCR0A := (1 shl 6) or (1 shl 1); // toggle OC0A & CTC mode
+  TCCR0B := (1 shl 1) or (1 shl 0); // prescaler = 64
+  OCR0A := 124; // 8000000 / 64 / 125 = 1 kHz
+  {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+  DDRA := DDRA or (1 shl 7);        // PA7 - pin 6
+  TCCR0A := (1 shl 4) or (1 shl 1); // toggle OC0B & CTC mode
   TCCR0B := (1 shl 1) or (1 shl 0); // prescaler = 64
   OCR0A := 124; // 8000000 / 64 / 125 = 1 kHz
   {$endif}
@@ -246,7 +263,8 @@ begin
 
   case cmd of
     // ADC pins (PC0..PC5 for atmega328p, PB1..PB3 for attiny}
-    cmdADCPins: cmd := {$ifdef CPUAVR5}%00111111{$else}%00001100{$endif};
+    cmdADCPins: cmd := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+                       %00111111{$else}%00001100{$endif};
     // ADC prescaler selection
     cmdADCDiv2  : ADCSRA := $81;
     cmdADCDiv4  : ADCSRA := $82;
@@ -259,17 +277,17 @@ begin
    // Reference voltage
     cmdADCVoltage_VCC:
       begin
-        ADMUXhi := ADCVoltageVcc;  // Vcc
+        ADMUXhiMask := ADCVoltageVcc;  // Vcc
         updateADMUXVector();
       end;
     cmdADCVoltage_1_1:
       begin
-        ADMUXhi := ADCVoltage1_1;  // 1.1 V
+        ADMUXhiMask := ADCVoltage1_1;  // 1.1 V
         updateADMUXVector();
       end;
     cmdADCVoltage_AREF:
       begin
-        ADMUXhi := ADCVoltageARev;// Aref pin
+        ADMUXhiMask := ADCVoltageARev;// Aref pin
         updateADMUXVector();
       end;
 
@@ -329,9 +347,8 @@ begin
         begin
           if ((cmd and (1 shl b)) > 0) and (numChannels < MaxADCChannels-1) then
           begin
+            ADMUXVector[numChannels] := ADMUXhiMask or b;
             inc(numChannels);
-            channels[numChannels-1] := b;
-            ADMUXVector[numChannels-1] := (ADMUXhi shl 4) or channels[numChannels-1];
           end;
         end;
       end;

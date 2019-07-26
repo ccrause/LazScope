@@ -68,8 +68,13 @@ procedure uartInit();
 begin
   DDRB := DDRB and not(1 shl RXPin);  // Input
   PORTB := PORTB or (1 shl RXPin);    // Pullup
+  {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
   GIMSK := GIMSK or (1 shl PCIE);     // Enable pin change interrupt
   PCMSK := PCMSK or (1 shl RXPin);    // Pin change mask = RXPin
+  {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+  GIMSK := GIMSK or (1 shl 5);        // Enable pin change interrupt1 - PCIE1
+  PCMSK1 := PCMSK1 or (1 shl RXPin);
+  {$endif}
   DDRB := DDRB and not(1 shl TXPin);  // Input, switch to output only when pushing data
   PORTB := PORTB or (1 shl TXPin);    // Pullup
 end;
@@ -119,7 +124,11 @@ const
 {$endif}
 
 // Force known storage for a byte value, by declaring it a parameter to ISR
+{$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
 procedure PCINT0(b: byte); interrupt; public name 'PCINT0_ISR';
+{$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+procedure PCINT1(b: byte); interrupt; public name 'PCINT1_ISR';
+{$endif}
 label
   RX;
 begin
