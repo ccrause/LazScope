@@ -200,57 +200,51 @@ const
   TXDelayCount = (TXDelay - 7 + 2) div 3;
 {$endif}
 
-procedure uartTransmit(const data: byte);
+procedure uartTransmit(const data: byte); assembler; nostackframe;
 label
   TxLoop, TxDelay;
-begin
-  // Switch on ouput - high
-  DDRB  := DDRB or (1 shl TXPin);
-  PORTB := PORTB or (1 shl TXPin);
-  avr_cli;
-  asm
-    // r24 - data
-    // r22 (& r23) - Delaycount
-    // r21 - stop & idle states
-    // r20 - copy of PORTB state
-
-    cbi PORTB+(-32), TXPin     // start bit = low
-    in r20, PORTB+(-32)        // store state of PORTB
-    ldi r21, 3                 // stop bit + idle state
-
-    TxLoop:
-    ldi r22, lo8(TXDelayCount)
-    {$ifdef wordSizeTXCounter}
-    ldi r23, hi8(TXDelayCount)
-    {$endif}
-
-    TxDelay:
-    {$ifdef wordSizeTXCounter}
-    sbiw r22, 1
-    {$else}
-    dec r22
-    {$endif}
-    brne TxDelay
-
-    bst r24, 0                  // Store bit 0 in T flag
-    bld r20, TXPin              // Load bit from T flag to register
-    lsr r21                     // shift stop & idle bits right into carry flag
-    ror r24                     // shift stop & idle bits from carry flag, zero flag set of all bits are zero after shift
-
-    // Cycle from after 1st out to after next out below:
-    // 8 + 3*TxDelay - 1
-    // Word: 9 + 4*TXDelayCount-1
-
-    // Cycles from out to out
-    // 8 + 3*TXDelayCount - 1
-    // Word: 9 + 4*TXDelayCount-1;
-
-    out PORTB+(-32), r20
-    brne TxLoop                 // loop until r24 is zero
-  end;
-  avr_sei;
-  DDRB := DDRB and not(1 shl TXPin);  // Input, switch to output only when pushing data
-  PORTB := PORTB or (1 shl TXPin);    // Pullup
+asm
+  // r0 - SREG copy
+  // r24 - data
+  // r22 (& r23) - Delaycount
+  // r21 - stop & idle states
+  // r20 - copy of PORTB state
+  // Prologue
+  in r0, 0x3f
+  cli
+  // Main code
+  sbi DDRB+(-32), TXPin      // Output
+  cbi PORTB+(-32), TXPin     // start bit = low
+  in r20, PORTB+(-32)        // store state of PORTB
+  ldi r21, 3                 // stop bit + idle state
+  TxLoop:
+  ldi r22, lo8(TXDelayCount)
+  {$ifdef wordSizeTXCounter}
+  ldi r23, hi8(TXDelayCount)
+  {$endif}
+  TxDelay:
+  {$ifdef wordSizeTXCounter}
+  sbiw r22, 1
+  {$else}
+  dec r22
+  {$endif}
+  brne TxDelay
+  bst r24, 0                  // Store bit 0 in T flag
+  bld r20, TXPin              // Load bit from T flag to register
+  lsr r21                     // shift stop & idle bits right into carry flag
+  ror r24                     // shift stop & idle bits from carry flag, zero flag set of all bits are zero after shift
+  // Cycle from after 1st out to after next out below:
+  // 8 + 3*TxDelay - 1
+  // Word: 9 + 4*TXDelayCount-1
+  // Cycles from out to out
+  // 8 + 3*TXDelayCount - 1
+  // Word: 9 + 4*TXDelayCount-1;
+  out PORTB+(-32), r20
+  brne TxLoop                 // loop until r24 is zero
+  cbi DDRB+(-32), TXPin       // Input
+  sbi PORTB+(-32), TXPin       // Pullup
+  // Epilogue
+  out 0x3f, r0
 end;
 
 {$endif}
