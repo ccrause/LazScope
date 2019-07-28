@@ -71,21 +71,19 @@ begin
 end;
 
 {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
-// Although nostackframe is specified, a stack frame is allocated anyway
-// thus skip own stack frame code
-// 3 byte stack (excl. PC)
-// 30 bytes code
+// 2 byte stack (excl. PC)
+// 22 bytes code
 procedure Timer1Overflow; interrupt; public name 'TIMER1_OVF_ISR'; assembler; nostackframe;
 asm
-  //push r0
-  //in   r0, 0x3f
-  //push r0
+  push r0
+  in   r0, 0x3f
+  push r0
   lds  r0, timerOverflow;
   inc  r0
   sts  timerOverflow, r0
-  //pop r0
-  //out 0x3f, r0
-  //pop r0
+  pop r0
+  out 0x3f, r0
+  pop r0
 end;
 
 // 8 bytes stack (excl. PC)
@@ -145,9 +143,7 @@ begin
     hibyte := ADCH;
     TWordAsBytes(v1).h := hibyte;
     TWordAsBytes(v1).l := lowbyte;
-    // No trigger function for low RAM controllers, else code doesn't fit
-    //{$if FPC_SRAMSIZE > 128}
-    if (triggerCheck = nil) or triggerCheck(v1, v2) then //{$endif}
+    if (triggerCheck = nil) or triggerCheck(v1, v2) then
       Break;
   until (i > rollovercount);
 
