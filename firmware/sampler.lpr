@@ -7,10 +7,14 @@ const
   // careful, large values will clash with stack!
   {$ifdef CPUAVR5}
   samples = 1200;
+  {$elseif FPC_SRAMSIZE = 512}
+  samples = 250;
   {$elseif FPC_SRAMSIZE = 256}
   samples = 124;
   {$elseif FPC_SRAMSIZE = 128}
   samples = 10;
+  {$else}
+    {$error 'Unexpected SRAM size or subarch, no predefined sample size!'}
   {$endif}
   // 3 bytes per 2 samples + 2 bytes per odd sample
   BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
@@ -35,7 +39,7 @@ type
 
 var
   databuf: TDataBuf; //array[0..BUFSIZE-1] of byte;  // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
-  time: uint32 = 0; // Duration of a data frame in 16 microsend ticks
+  time: uint32 = 0; // Duration of a data frame in 16 microsecond ticks
   ADMUXhiMask: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
@@ -47,6 +51,7 @@ var
   numChannels: uint8;
 
   {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
+  // Attiny x5 only have 8 bit timers, so count overflows to extend timer measurement range
   timerOverflow: byte;
   {$endif}
 
