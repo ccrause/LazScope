@@ -14,8 +14,122 @@
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
     </General>
-    <BuildModes Count="1">
-      <Item1 Name="Default" Default="True"/>
+    <BuildModes Count="3">
+      <Item1 Name="tiny45" Default="True"/>
+      <Item2 Name="mega328p">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="sampler" ApplyConventions="False"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../shared"/>
+            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <CStyleMacros Value="True"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <TargetCPU Value="avr"/>
+            <TargetOS Value="embedded"/>
+            <Optimizations>
+              <OptimizationLevel Value="4"/>
+            </Optimizations>
+            <SmallerCode Value="True"/>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <DebugInfoType Value="dsDwarf3"/>
+              <UseLineInfoUnit Value="False"/>
+            </Debugging>
+          </Linking>
+          <Other>
+            <Verbosity>
+              <ShowAll Value="True"/>
+            </Verbosity>
+            <ConfigFile>
+              <DontUseConfigFile Value="True"/>
+              <CustomConfigFile Value="True"/>
+              <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
+            </ConfigFile>
+            <CustomOptions Value="-Wpatmega328p
+-XPavr-
+-Sm
+-Si
+-dF_CPU:=16000000
+-dBAUD:=115200"/>
+            <CompilerPath Value="/home/christo/fpc/3.3.1/compiler/ppcrossavr"/>
+            <ExecuteBefore>
+              <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
+              <CompileReasons Compile="False" Build="False" Run="False"/>
+            </ExecuteBefore>
+            <ExecuteAfter>
+              <Command Value="/home/christo/fpc/fpc-avr/src/scripts/listasm.sh $(targetfile).elf"/>
+              <CompileReasons Run="False"/>
+            </ExecuteAfter>
+          </Other>
+        </CompilerOptions>
+      </Item2>
+      <Item3 Name="tiny24">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="sampler" ApplyConventions="False"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../shared"/>
+            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <CStyleMacros Value="True"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <TargetCPU Value="avr"/>
+            <TargetOS Value="embedded"/>
+            <Optimizations>
+              <OptimizationLevel Value="4"/>
+            </Optimizations>
+            <SmallerCode Value="True"/>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <DebugInfoType Value="dsDwarf3"/>
+              <UseLineInfoUnit Value="False"/>
+            </Debugging>
+          </Linking>
+          <Other>
+            <Verbosity>
+              <ShowAll Value="True"/>
+            </Verbosity>
+            <ConfigFile>
+              <DontUseConfigFile Value="True"/>
+              <CustomConfigFile Value="True"/>
+              <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
+            </ConfigFile>
+            <CustomOptions Value="-Wpattiny24
+-XPavr-
+-Sm
+-Si
+-dF_CPU:=8000000
+-dBAUD:=115200"/>
+            <CompilerPath Value="/home/christo/fpc/3.3.1/compiler/ppcrossavr"/>
+            <ExecuteBefore>
+              <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
+              <CompileReasons Compile="False" Build="False" Run="False"/>
+            </ExecuteBefore>
+            <ExecuteAfter>
+              <Command Value="/home/christo/fpc/fpc-avr/src/scripts/listasm.sh $(targetfile).elf"/>
+              <CompileReasons Run="False"/>
+            </ExecuteAfter>
+          </Other>
+        </CompilerOptions>
+      </Item3>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -26,7 +140,7 @@
         <Mode0 Name="default"/>
       </Modes>
     </RunParams>
-    <Units Count="2">
+    <Units Count="4">
       <Unit0>
         <Filename Value="sampler.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -35,6 +149,14 @@
         <Filename Value="../shared/commands.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="uart.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="samplesizecalc.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit3>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -56,40 +178,38 @@
       <TargetCPU Value="avr"/>
       <TargetOS Value="embedded"/>
       <Optimizations>
-        <OptimizationLevel Value="3"/>
+        <OptimizationLevel Value="4"/>
       </Optimizations>
+      <SmallerCode Value="True"/>
     </CodeGeneration>
     <Linking>
       <Debugging>
         <DebugInfoType Value="dsDwarf3"/>
         <UseLineInfoUnit Value="False"/>
       </Debugging>
-      <Options>
-        <PassLinkerOptions Value="True"/>
-        <LinkerOptions Value="--undefined=_mmcu_ --undefined=_mmcu_data --section-start=.mmcu=0x910000"/>
-      </Options>
     </Linking>
     <Other>
+      <Verbosity>
+        <ShowAll Value="True"/>
+      </Verbosity>
       <ConfigFile>
         <DontUseConfigFile Value="True"/>
         <CustomConfigFile Value="True"/>
-        <ConfigFilePath Value="~/fpc/avr/fpc.cfg"/>
+        <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
       </ConfigFile>
-      <CustomOptions Value="-Wpatmega328p
+      <CustomOptions Value="-Wpattiny45
 -XPavr-
 -Sm
 -Si
--k'--undefined=_mmcu_ --section-start=.mmcu=0x910000'
--g
--al
--dF_CPU:=16000000"/>
-      <CompilerPath Value="/home/christo/fpc/avr/compiler/ppcrossavr"/>
+-dF_CPU:=8000000
+-dBAUD:=115200"/>
+      <CompilerPath Value="/home/christo/fpc/3.3.1/compiler/ppcrossavr"/>
       <ExecuteBefore>
         <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
         <CompileReasons Compile="False" Build="False" Run="False"/>
       </ExecuteBefore>
       <ExecuteAfter>
-        <Command Value="/home/christo/fpc/fpc-avr/src/scripts/listasm.sh $(targetfile)"/>
+        <Command Value="/home/christo/fpc/fpc-avr/src/scripts/listasm.sh $(targetfile).elf"/>
         <CompileReasons Run="False"/>
       </ExecuteAfter>
     </Other>
