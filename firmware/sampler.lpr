@@ -22,8 +22,8 @@ type
   end;
 
 var
-  databuf: TDataBuf; //array[0..BUFSIZE-1] of byte;  // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
-  time: uint32 = 0; // Duration of a data frame in 16 microsecond ticks
+  databuf: TDataBuf; // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
+  time: uint32; // Duration of a data frame in 16 microsecond ticks
   ADMUXhiMask: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
@@ -116,12 +116,13 @@ end;
 // Read ADC and pack data buffer
 procedure gatherData;
 var
-  nextChannelIndex: byte = 0;
+  nextChannelIndex: byte;
   lowbyte, hibyte: byte;
   v1, v2, i, j: word;
 begin
   v1 := triggerInit;
   i := 0;
+  nextChannelIndex := 0;
   repeat
     ADMUX := ADMUXVector[nextChannelIndex];
     ADCSRA := ADCSRA or (1 shl ADSC); // $40;
@@ -241,7 +242,7 @@ end;
 procedure readSerialCmds; inline;
 var
   cmd: byte;
-  b: byte = 0;
+  b: byte;
   i: uint16;
 begin
   cmd := uartReceive();
