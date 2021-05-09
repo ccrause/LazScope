@@ -12,6 +12,8 @@ The first sample is left aligned so that the right-most 6 bits of the 2nd byte i
 
 Multiple ADC channels can be selected.  The firmware will then cycle the multiplexer through the channels in fixed sequence.
 
+The baud rate defaults to 115200, but can be changed by defining BAUD, e.g. via command line: _-dBAUD=38400_
+
 ### Supported controllers
 The code is factored such that similar controllers such as attiny44/84 or attiny25/85 should also work (but is untested).
 The firmware was tested on atmega328p, attiny45 and attiny24. Note that on low memory devices (attiny2x) only a few ADC samples can be collected per frame.
