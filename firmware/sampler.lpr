@@ -4,30 +4,14 @@ uses
   intrinsics, commands, uart;
 
 const
-  // careful, large values will clash with stack!
-  {$ifdef CPUAVR5}
-  samples = 1200;
-  {$elseif FPC_SRAMSIZE = 512}
-  samples = 250;
-  {$elseif FPC_SRAMSIZE = 256}
-  samples = 124;
-  {$elseif FPC_SRAMSIZE = 128}
-  samples = 10;
-  {$else}
-    {$error 'Unexpected SRAM size or subarch, no predefined sample size!'}
-  {$endif}
-  // 3 bytes per 2 samples + 2 bytes per odd sample
+  {$include samplesizecalc.inc}
+  // 3 bytes per 2 samples + 2 bytes per odd sample, 4 bytes deltaTime, 1 byte checksum
   BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
 
   // ADC ADMUX constants mask - different for atmega/attiny
   ADCVoltageVcc  = {$ifdef CPUAVR5}4{$else}0{$endif} shl 4;
   ADCVoltage1_1  = {$ifdef CPUAVR5}12{$else}8{$endif} shl 4;
   ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif} shl 4;
-
-  // On atmega328p DIP and attinyx4 only ADC0-5 are available
-  // On attinyx5 ADC0 is reset and ADC1 is square wave signal, so ADC2-3 are available
-  MaxADCChannels = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
-                   5{$else}2{$endif};
 
 type
   TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
