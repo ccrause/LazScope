@@ -199,11 +199,7 @@ end;
 
 procedure init();  inline;
 begin
-  {$ifdef CPUAVR5}
-  uartInit(16);  // 115200 // UBBR=3 baud rate of 500000 @ 16 MHz
-  {$else}
-  uartInit();   // Fixed baud rate, see BAUDRATE const in uart.pas
-  {$endif}
+  uartInit();   // Baud rate can be specified with a define, else it defulats to 115200
   avr_sei;
 
   ADCSRA := $86;

@@ -1,13 +1,10 @@
 unit uart;
 
+{$macro on}
+
 interface
 
-{$ifdef CPUAVR5}
-procedure uartInit(const UBRR: word);
-{$else}
 procedure uartInit();
-{$endif}
-
 procedure uartTransmit(const data: byte);
 // Blocking if data is not available
 function uartReceive: byte;
@@ -17,18 +14,21 @@ implementation
 uses
   intrinsics;
 
-{$ifdef CPUAVR5}
-procedure uartInit(const UBRR: word);
-begin
-  UBRR0H := UBRR shr 8;
-  UBRR0L := byte(UBRR);
+{$ifndef BAUD}
+  // If a baud rate wasn't defined elsewhere, default to 115200
+  {$define BAUD:=115200}
+{$endif}
 
+{$ifdef CPUAVR5}
+// Calculate UBRR value for U2X mode
+{$define UBRR_:= (F_CPU + 4*BAUD) div (8*BAUD) - 1}
+procedure uartInit;
+begin
+  UBRR0 := UBRR_;
   // Set U2X bit
   UCSR0A := UCSR0A or (1 shl U2X0);
-
   // Enable receiver and transmitter
   UCSR0B := (1 shl RXEN0) or (1 shl TXEN0);
-
   // Set frame format: 8data, 1stop bit, no parity
   UCSR0C := (3 shl UCSZ0);
 end;
@@ -105,8 +105,8 @@ end;
 
 const
   // delays required in CPU clock cycles
-  RXDelay1_5 = (((3*F_CPU + (BAUDRATE div 2)) div BAUDRATE) + 1) div 2;  // cycles per bit =
-  RXDelay    = (F_CPU + (BAUDRATE div 2)) div BAUDRATE;
+  RXDelay1_5 = (((3*F_CPU + (BAUD div 2)) div BAUD) + 1) div 2;  // cycles per bit =
+  RXDelay    = (F_CPU + (BAUD div 2)) div BAUD;
 
   // Loop counter values corrected for overhead & instruction count
   // Switch to word if LoopCount1_5 > 255, or RXDelay1_5 > 3*255 + 30 = 795
@@ -186,7 +186,7 @@ begin
 end;
 
 const
-  TXDelay = (F_CPU + (BAUDRATE div 2)) div BAUDRATE;
+  TXDelay = (F_CPU + (BAUD div 2)) div BAUD;
   // If TXDelayCount > 255 then use word size counter
   // (TXDelay - 5) div 3 > 255: TXDelay > 770
 {$if TXDelay > 770}
@@ -246,7 +246,6 @@ asm
   // Epilogue
   out 0x3f, r0
 end;
-
 {$endif}
 
 end.
