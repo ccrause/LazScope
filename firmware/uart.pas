@@ -52,8 +52,7 @@ begin
 end;
 {$else}
 const
-  BAUDRATE = 115200;
-  RXBufferSize = 4;
+  RXBufferSize = 2;
   PB0 = 0;
   PB1 = 1;
   PB2 = 2;
@@ -125,12 +124,14 @@ const
 
 // Force known storage for a byte value, by declaring it a parameter to ISR
 {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
-procedure PCINT0(b: byte); interrupt; public name 'PCINT0_ISR';
+procedure PCINT0; interrupt; public name 'PCINT0_ISR';
 {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
-procedure PCINT1(b: byte); interrupt; public name 'PCINT1_ISR';
+procedure PCINT1; interrupt; public name 'PCINT1_ISR';
 {$endif}
 label
   RX;
+var
+  c: byte;
 begin
   // Make sure it is our pin and it is 0
   if(PINB and (1 shl RXPin) = 0) then
@@ -169,7 +170,7 @@ begin
       // else
       //   3*LoopCount-1 + 6;
 
-      std b, r20
+      std c, r20
       // Ignore stop bit for now
       //Stop:
       //dec r18             // 1
@@ -180,7 +181,7 @@ begin
     if RXIndex < RXBufferSize then
     begin
       inc(RXIndex);
-      RXBuffer[RXIndex] := b;
+      RXBuffer[RXIndex] := c;
     end;
   end;
 end;
