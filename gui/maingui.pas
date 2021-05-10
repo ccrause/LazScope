@@ -98,9 +98,6 @@ const
   LineColors: array[0..7] of TColor =
     (clLime, clBlue, clRed, clPurple, clYellow, clMaroon, clWhite, clAqua);
 
-  ScanFrames: array[0..6] of double =
-    (5.75, 6.68, 10.36, 17.75, 35.3, 66.1, 132);
-
 function CalcDataBufferSize(const SampleCount: integer): integer;
 begin
   result := 3*(SampleCount div 2) + 2*(SampleCount and 1) + 4 + 1;
@@ -186,8 +183,6 @@ begin
     ADCScalerSelector.ItemIndex := 3;
     cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
     SerialThread.SetCommand(cmd);
-    // Estimate of time scale
-    TimeFrame := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
 
     SerialThread.SerialReturnValue := 0;
     SerialThread.SetCommand(cmdADCPins);
@@ -274,7 +269,6 @@ var
   cmd: byte;
 begin
   cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
-  Chart1.Extent.XMax := ScanFrames[ADCScalerSelector.ItemIndex] / 1180 * numsamples;
   SerialThread.SetCommand(cmd);
 end;
 
