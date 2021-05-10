@@ -155,6 +155,7 @@ procedure TForm1.connectButtonClick(Sender: TObject);
 var
   cmd: byte;
   baud, i: integer;
+  err: boolean;
 begin
   baud := StrToInt(BaudEdit.Text);
   if (SerialComboBox.Text <> '') and (baud > 0) then
@@ -168,52 +169,86 @@ begin
       SerialThread.OnErrorNotify := @self.Status;
     end;
 
-    SerialThread.SerialReturnValue := 0;
-    SerialThread.SetCommand(cmdSampleCount);
+    err := false;
+    SerialThread.SetCommand(cmdEcho);
+    i := 0;
     repeat
       Sleep(10);
       Application.ProcessMessages;
-    until SerialThread.SerialReturnValue > 0;
+      inc(i);
+    until (SerialThread.SerialReturnValue > 0) or (i > 100);
+    err := (SerialThread.SerialReturnValue <> cmdEcho);
 
-    numsamples := SerialThread.SerialReturnValue;
-    bufsize := CalcDataBufferSize(numsamples);
-    SetLength(buf, bufsize);
-    SetLength(data, numsamples);
-
-    ADCScalerSelector.ItemIndex := 3;
-    cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
-    SerialThread.SetCommand(cmd);
-
-    SerialThread.SerialReturnValue := 0;
-    SerialThread.SetCommand(cmdADCPins);
-    repeat
-      Sleep(10);
-      Application.ProcessMessages;
-    until SerialThread.SerialReturnValue > 0;
-
-    ADCPortsList.Items.Clear;
-    cmd := SerialThread.SerialReturnValue;
-    for i := 0 to 7 do
+    if not err then
     begin
-      if (cmd and (1 shl i)) > 0 then
-        ADCPortsList.Items.Add(IntToStr(i));
+      SerialThread.SerialReturnValue := 0;
+      SerialThread.SetCommand(cmdSampleCount);
+      i := 0;
+      repeat
+        Sleep(10);
+        Application.ProcessMessages;
+        inc(i);
+      until (SerialThread.SerialReturnValue > 0) or (i > 100);
+      err := SerialThread.SerialReturnValue = 0;
     end;
 
-    // Sync ADC prescaler with Arduino
-    ADCPortsList.Checked[0] := true;
-    CheckSelectedADCPorts;
+    if not err then
+    begin
+      numsamples := SerialThread.SerialReturnValue;
+      bufsize := CalcDataBufferSize(numsamples);
+      SetLength(buf, bufsize);
+      SetLength(data, numsamples);
 
-    // Sync ADC trigger with GUI
-    TriggerOptionsRadioBoxClick(nil);
+      ADCScalerSelector.ItemIndex := 3;
+      cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
+      SerialThread.SetCommand(cmd);
 
-    // Enable GUI elements
-    RunningCheck.Enabled := true;
-    SingleShotCheck.Enabled := true;
-    ADCScalerSelector.Enabled := true;
-    ADCPortsList.Enabled := true;
-    ReferenceVoltageSelector.Enabled := true;
-    TriggerOptionsRadioBox.Enabled := true;
-    TriggerLevelEdit.Enabled := true;
+      SerialThread.SerialReturnValue := 0;
+      SerialThread.SetCommand(cmdADCPins);
+      i := 0;
+      repeat
+        Sleep(10);
+        Application.ProcessMessages;
+        inc(i)
+      until (SerialThread.SerialReturnValue > 0) or (i > 100);
+      err := SerialThread.SerialReturnValue = 0;
+    end;
+
+    if not err then
+    begin
+      ADCPortsList.Items.Clear;
+      cmd := SerialThread.SerialReturnValue;
+      for i := 0 to 7 do
+      begin
+        if (cmd and (1 shl i)) > 0 then
+          ADCPortsList.Items.Add(IntToStr(i));
+      end;
+
+      // Sync ADC prescaler with Arduino
+      ADCPortsList.Checked[0] := true;
+      CheckSelectedADCPorts;
+
+      // Sync ADC trigger with GUI
+      TriggerOptionsRadioBoxClick(nil);
+
+      // Enable GUI elements
+      RunningCheck.Enabled := true;
+      SingleShotCheck.Enabled := true;
+      ADCScalerSelector.Enabled := true;
+      ADCPortsList.Enabled := true;
+      ReferenceVoltageSelector.Enabled := true;
+      TriggerOptionsRadioBox.Enabled := true;
+      TriggerLevelEdit.Enabled := true;
+    end
+    else
+    begin
+      // Free SerialThread and reset gui state
+      SerialThread.WakeUpAndTerminate;
+      repeat until SerialThread.Done;
+      FreeAndNil(SerialThread);
+      connectButton.Enabled := true;
+      Status('Error connecting to '+SerialComboBox.Text);
+    end;
   end;
 end;
 

@@ -34,6 +34,9 @@ const
   cmdADCVoltage_1_1    = 33;
   cmdADCVoltage_AREF   = 34;
 
+  // Specific command that should be echoed from controller
+  cmdEcho              = 85;
+
   // Request data frame from Arduino
   cmdSendData          = 115; // 's' = start
 

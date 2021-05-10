@@ -31,7 +31,6 @@ type
     // Then call event handler with error message
     procedure PushError;
 
-    //
     procedure SendCommandWaitForResponse(const cmd: byte);
   protected
     procedure Execute; override;
@@ -39,14 +38,15 @@ type
     SerialReturnValue: integer;
 
     constructor Create(fSerialPortName: string; fBaudRate: integer);
-    //CreateSuspended: Boolean;
-                       //const StackSize: SizeUInt = DefaultStackSize);
 
     // Called by main thread to get new copy of data
     procedure PullData(var data: TDataBuffer);
 
     // Submits a command to the command buffer
     procedure SetCommand(cmd: byte);
+
+    // Call Terminate, then trigger FWaitingToProceed to run the Execute loop
+    procedure WakeUpAndTerminate;
 
     // Event that will be called to display error messages
     property OnErrorNotify: TStatusNotify read FError write FError;
@@ -105,7 +105,7 @@ begin
     SerialReturnValue := v1 + (v2 shl 8);
     SetLength(FData, CalcDataBufferSize(SerialReturnValue));
   end
-  else if (cmd = cmdADCPins) then
+  else if (cmd = cmdADCPins) or (cmd = cmdEcho) then
   begin
     FSerial.ReadByteTimeout(v1, 500);
     SerialReturnValue := v1;
@@ -126,16 +126,6 @@ procedure TSerialInterface.Execute;
 var
   cmd: byte;
 begin
-  // Make sure Arduino is running by sending 0, should just echo 0.
-  FSerial.Write(0);
-  FSerial.ReadByteTimeout(cmd, 500);
-
-  if (cmd <> 0) then
-  begin
-    FErrorMessage := 'Unexpected reply from serial';
-    Synchronize(@PushError);
-  end;
-
   while not Terminated do
   begin
     // Execute configuration commands first
@@ -172,6 +162,7 @@ begin
 
   FSerial := TSerialObj.Create;
   FSerial.OpenPort(fSerialPortName, fBaudRate);
+  FSerial.FlushInput;
 
   FWaitingToProceed := RTLEventCreate;
   FCmdBuffer := TFPList.Create;
@@ -196,6 +187,12 @@ begin
   end;
 
   // Wake up thread to execute command
+  RTLeventSetEvent(FWaitingToProceed);
+end;
+
+procedure TSerialInterface.WakeUpAndTerminate;
+begin
+  Terminate;
   RTLeventSetEvent(FWaitingToProceed);
 end;
 
