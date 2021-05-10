@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 313
+  Left = 241
   Height = 494
-  Top = 255
+  Top = 120
   Width = 1050
   Caption = 'Lazarus Oscilloscope'
   ClientHeight = 494
@@ -9,10 +9,11 @@ object Form1: TForm1
   OnClose = FormClose
   OnShow = FormShow
   Position = poDesktopCenter
+  LCLVersion = '2.0.12.0'
   Visible = True
   object Chart1: TChart
     Left = 0
-    Height = 469
+    Height = 470
     Top = 0
     Width = 818
     AxisList = <    
@@ -52,19 +53,19 @@ object Form1: TForm1
   end
   object Panel1: TPanel
     Left = 818
-    Height = 469
+    Height = 470
     Top = 0
     Width = 232
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 469
+    ClientHeight = 470
     ClientWidth = 232
     TabOrder = 1
     object RunningCheck: TCheckBox
       Left = 8
       Height = 22
       Top = 96
-      Width = 69
+      Width = 75
       Caption = 'Running'
       Enabled = False
       OnChange = RunningCheckChange
@@ -74,7 +75,7 @@ object Form1: TForm1
       Left = 133
       Height = 22
       Top = 96
-      Width = 83
+      Width = 89
       Caption = 'SingleShot'
       Enabled = False
       OnChange = SingleShotCheckChange
@@ -91,7 +92,7 @@ object Form1: TForm1
     end
     object BaudEdit: TEdit
       Left = 136
-      Height = 27
+      Height = 26
       Top = 32
       Width = 80
       TabOrder = 3
@@ -99,23 +100,23 @@ object Form1: TForm1
     end
     object Label6: TLabel
       Left = 136
-      Height = 17
+      Height = 16
       Top = 8
-      Width = 55
+      Width = 59
       Caption = 'Baud rate'
       ParentColor = False
     end
     object Label4: TLabel
       Left = 8
-      Height = 17
+      Height = 16
       Top = 8
-      Width = 58
+      Width = 62
       Caption = 'Serial port'
       ParentColor = False
     end
     object SerialComboBox: TComboBox
       Left = 8
-      Height = 29
+      Height = 28
       Top = 32
       Width = 113
       ItemHeight = 0
@@ -136,7 +137,7 @@ object Form1: TForm1
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 3
-      ClientHeight = 33
+      ClientHeight = 34
       ClientWidth = 210
       Columns = 3
       Enabled = False
@@ -151,54 +152,54 @@ object Form1: TForm1
     end
     object LabelY: TLabel
       Left = 179
-      Height = 17
+      Height = 16
       Hint = 'Press ALT for reticule'
       Top = 232
-      Width = 7
+      Width = 8
       Caption = '0'
       ParentColor = False
     end
     object LabelX: TLabel
       Left = 179
-      Height = 17
+      Height = 16
       Hint = 'Press ALT for reticule'
       Top = 216
-      Width = 7
+      Width = 8
       Caption = '0'
       ParentColor = False
     end
     object LabelYlbl: TLabel
       Left = 142
-      Height = 17
+      Height = 16
       Hint = 'Press ALT for reticule'
       Top = 232
-      Width = 17
+      Width = 18
       Caption = 'Y - '
       ParentColor = False
     end
     object Label5: TLabel
       Left = 142
-      Height = 17
+      Height = 16
       Hint = 'Press ALT for reticule'
       Top = 192
-      Width = 44
+      Width = 48
       Caption = 'Reticule'
       ParentColor = False
     end
     object LabelXlbl: TLabel
       Left = 142
-      Height = 17
+      Height = 16
       Hint = 'Press ALT for reticule'
       Top = 216
-      Width = 17
+      Width = 18
       Caption = 'X - '
       ParentColor = False
     end
     object Label2: TLabel
       Left = 8
-      Height = 17
+      Height = 16
       Top = 192
-      Width = 69
+      Width = 75
       Caption = 'Trigger level'
       ParentColor = False
     end
@@ -217,7 +218,7 @@ object Form1: TForm1
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 2
-      ClientHeight = 110
+      ClientHeight = 111
       ClientWidth = 218
       Columns = 2
       Enabled = False
@@ -228,19 +229,17 @@ object Form1: TForm1
         'A3'
         'A4'
         'A5'
-        'A6*'
-        'A7*'
       )
       OnClick = ADCPortsListClick
       OnItemClick = ADCPortsListItemClick
       TabOrder = 6
       Data = {
-        080000000202020202020202
+        06000000020202020202
       }
     end
     object ReferenceVoltageSelector: TComboBox
       Left = 115
-      Height = 29
+      Height = 28
       Top = 288
       Width = 99
       Enabled = False
@@ -257,23 +256,23 @@ object Form1: TForm1
     end
     object Label3: TLabel
       Left = 115
-      Height = 17
+      Height = 16
       Top = 264
-      Width = 101
+      Width = 109
       Caption = 'Reference voltage'
       ParentColor = False
     end
     object Label1: TLabel
       Left = 8
-      Height = 17
+      Height = 16
       Top = 264
-      Width = 81
+      Width = 85
       Caption = 'ADC prescaler'
       ParentColor = False
     end
     object ADCScalerSelector: TComboBox
       Left = 8
-      Height = 29
+      Height = 28
       Top = 288
       Width = 82
       Enabled = False
@@ -294,7 +293,7 @@ object Form1: TForm1
     end
     object TriggerLevelEdit: TSpinEdit
       Left = 8
-      Height = 27
+      Height = 26
       Top = 216
       Width = 69
       Enabled = False
@@ -307,8 +306,8 @@ object Form1: TForm1
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Height = 25
-    Top = 469
+    Height = 24
+    Top = 470
     Width = 1050
     BorderWidth = 1
     Panels = <    
@@ -347,8 +346,8 @@ object Form1: TForm1
     SimplePanel = False
   end
   object ChartToolset1: TChartToolset
-    left = 96
-    top = 88
+    Left = 96
+    Top = 88
     object ChartToolset1PanDragTool1: TPanDragTool
       Shift = [ssRight]
     end
