@@ -49,6 +49,7 @@ type
     procedure ChartToolset1DataPointCrosshairTool1Draw(
       ASender: TDataPointCrosshairTool);
     procedure connectButtonClick(Sender: TObject);
+    procedure SerialComboBoxDropDown(Sender: TObject);
     procedure SingleShotCheckChange(Sender: TObject);
     procedure RunningCheckChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -250,6 +251,11 @@ begin
       Status('Error connecting to '+SerialComboBox.Text);
     end;
   end;
+end;
+
+procedure TForm1.SerialComboBoxDropDown(Sender: TObject);
+begin
+  SerialComboBox.Items.CommaText := GetSerialPortNames;
 end;
 
 procedure TForm1.SingleShotCheckChange(Sender: TObject);

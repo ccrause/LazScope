@@ -120,6 +120,7 @@ object Form1: TForm1
       Top = 32
       Width = 113
       ItemHeight = 0
+      OnDropDown = SerialComboBoxDropDown
       TabOrder = 4
     end
     object TriggerOptionsRadioBox: TRadioGroup
