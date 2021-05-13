@@ -128,8 +128,9 @@ var
 begin
   while not Terminated do
   begin
+    FSerial.FlushInput;
     // Execute configuration commands first
-    while FCmdBuffer.Count > 0 do
+    while (FCmdBuffer.Count > 0) and not Terminated do
     begin
       System.EnterCriticalsection(rcSection);
       try
@@ -146,8 +147,9 @@ begin
     // Clear the event
     RTLeventResetEvent(FWaitingToProceed);
 
-    // Now wait for next event
-    RTLeventWaitFor(FWaitingToProceed);
+    // Now wait for next event, but only if not terminated
+    if not Terminated then
+      RTLeventWaitFor(FWaitingToProceed);
   end;
   FSerial.Free;
   FDone := true;
@@ -162,7 +164,6 @@ begin
 
   FSerial := TSerialObj.Create;
   FSerial.OpenPort(fSerialPortName, fBaudRate);
-  FSerial.FlushInput;
 
   FWaitingToProceed := RTLEventCreate;
   FCmdBuffer := TFPList.Create;

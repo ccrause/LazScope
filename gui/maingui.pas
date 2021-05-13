@@ -70,10 +70,9 @@ type
 
     procedure Processdata;
     procedure Status(const s: string);
-
     procedure DataWaiting(var Message: TLMessage); message WM_DataWaiting;
-
     procedure CheckSelectedADCPorts;
+    procedure CloseSerialThread;
   public
     { public declarations }
   end; 
@@ -136,7 +135,6 @@ begin
   TAChartUtils.Unused(ATool, APoint);
   Chart1.SetFocus;
 end;
-
 
 procedure TForm1.ChartToolset1DataPointCrosshairTool1Draw(
   ASender: TDataPointCrosshairTool);
@@ -243,10 +241,7 @@ begin
     end
     else
     begin
-      // Free SerialThread and reset gui state
-      SerialThread.WakeUpAndTerminate;
-      repeat until SerialThread.Done;
-      FreeAndNil(SerialThread);
+      CloseSerialThread;
       connectButton.Enabled := true;
       Status('Error connecting to '+SerialComboBox.Text);
     end;
@@ -270,17 +265,8 @@ end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  running := false;
-  if Assigned(SerialThread) then
-  begin
-    SerialThread.Terminate;
-    SerialThread.SetCommand(0);  // Need to wake thread if asleep / waiting for command
-
-    while not SerialThread.Done do
-    begin
-      Application.ProcessMessages;
-    end;
-  end;
+  CloseAction := caFree;
+  CloseSerialThread;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
@@ -342,7 +328,7 @@ begin
   end;
 end;
 
-procedure TForm1.ProcessData;
+procedure TForm1.Processdata;
 var
   i, j: integer;
   checksum, l, h: byte;
@@ -498,6 +484,27 @@ begin
 
   SerialThread.SetCommand(cmdSelectPorts);
   SerialThread.SetCommand(PortsSelected);
+end;
+
+procedure TForm1.CloseSerialThread;
+var
+  timeout: integer;
+begin
+  running := false;
+  if Assigned(SerialThread) then
+  begin
+    SerialThread.WakeUpAndTerminate;
+    timeout := 10;
+    while not SerialThread.Done and (timeout > 0) do
+    begin
+      Application.ProcessMessages;
+      Sleep(100);
+      dec(timeout);
+    end;
+    if timeout = 0 then
+      CloseThread(SerialThread.Handle);
+    FreeAndNil(SerialThread);
+  end;
 end;
 
 end.
