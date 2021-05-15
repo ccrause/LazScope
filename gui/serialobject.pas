@@ -320,11 +320,10 @@ end;
 
   function GetSerialPortNames: string;
   var
-    i, j: Integer;
+    i: Integer;
     sr : TSearchRec;
     f: TSerialHandle;
     val: integer;
-    tio: Termios;
     ser: TSerialStruct;
   begin
     Result := '';
