@@ -72,7 +72,7 @@ type
     procedure Status(const s: string);
     procedure DataWaiting(var Message: TLMessage); message WM_DataWaiting;
     procedure CheckSelectedADCPorts;
-    procedure CloseSerialThread;
+    function CloseSerialThread: boolean;
   public
     { public declarations }
   end; 
@@ -238,6 +238,7 @@ begin
       ReferenceVoltageSelector.Enabled := true;
       TriggerOptionsRadioBox.Enabled := true;
       TriggerLevelEdit.Enabled := true;
+      Status('Success connecting to '+SerialComboBox.Text);
     end
     else
     begin
@@ -266,7 +267,13 @@ end;
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
   CloseAction := caFree;
-  CloseSerialThread;
+  if not CloseSerialThread then
+  begin
+    Status('Could not close serial thread, calling Halt');
+    Application.ProcessMessages;
+    Sleep(1500);
+    Halt(255);
+  end;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
@@ -484,11 +491,12 @@ begin
   SerialThread.SetCommand(PortsSelected);
 end;
 
-procedure TForm1.CloseSerialThread;
+function TForm1.CloseSerialThread: boolean;
 var
   timeout: integer;
 begin
   running := false;
+  Result := true;
   if Assigned(SerialThread) then
   begin
     SerialThread.WakeUpAndTerminate;
@@ -499,9 +507,9 @@ begin
       Sleep(100);
       dec(timeout);
     end;
-    if timeout = 0 then
-      CloseThread(SerialThread.Handle);
-    FreeAndNil(SerialThread);
+    Result := timeout > 0;
+    if Result then
+      FreeAndNil(SerialThread);
   end;
 end;
 
