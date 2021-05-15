@@ -270,8 +270,6 @@ begin
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
-var
-  cmd: byte;
 begin
   epTimer := TEpikTimer.Create(self);
   if epTimer.HWCapabilityDataAvailable then
