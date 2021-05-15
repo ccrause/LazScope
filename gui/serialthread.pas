@@ -76,7 +76,10 @@ var
   reply, v1, v2: byte;
   recv: integer;
 begin
-  FSerial.Write(cmd);
+  recv := FSerial.Write(cmd);
+  // Detect if there was an error
+  if recv <= 0 then
+    exit;
 
   if cmd = cmdSendData then
   begin
