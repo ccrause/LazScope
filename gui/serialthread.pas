@@ -73,7 +73,7 @@ end;
 
 procedure TSerialInterface.SendCommandWaitForResponse(const cmd: byte);
 var
-  reply, v1, v2: byte;
+  reply, v1, v2, i: byte;
   recv: integer;
 begin
   recv := FSerial.Write(cmd);
@@ -83,18 +83,13 @@ begin
 
   if cmd = cmdSendData then
   begin
-    recv := FSerial.ReadTimeout(FData[0], bufsize, 2000);
+    recv := FSerial.ReadTimeout(FData[0], bufsize, 1000);
     if recv < bufsize then // retry for remaining data
       recv := recv + FSerial.ReadTimeout(FData[recv], (bufsize - recv), 2000);
 
     if (recv < bufsize) then
     begin
       FErrorMessage := 'Comms timeout';
-      Synchronize(@PushError);
-    end
-    else if recv < bufsize then
-    begin
-      FErrorMessage := 'Data buffer underflow';
       Synchronize(@PushError);
     end
     else
@@ -108,9 +103,32 @@ begin
     SerialReturnValue := v1 + (v2 shl 8);
     SetLength(FData, CalcDataBufferSize(SerialReturnValue));
   end
-  else if (cmd = cmdADCPins) or (cmd = cmdEcho) then
+  else if cmd = cmdADCPins then
   begin
     FSerial.ReadByteTimeout(v1, 500);
+    SerialReturnValue := v1;
+  end
+  else if cmd = cmdEcho then
+  begin
+    // A bootloader may delay startup of firmware
+    // so clear input buffer and try to receive an echo cmd
+    i := 0;
+    repeat
+      // First command sent to verify connection and firmware
+      // Try to clear garbage from buffer
+      FSerial.FlushInput;
+      Sleep(250);
+      v1 := 0;
+      FSerial.ReadByteTimeout(v1, 100);
+      if v1 <> cmdEcho then
+      begin
+        inc(i);
+        recv := FSerial.Write(cmd);
+        // Detect if there was an error
+        if recv <= 0 then
+          exit;
+      end;
+    until (v1 = cmdEcho) or (i > 8);
     SerialReturnValue := v1;
   end
   else
