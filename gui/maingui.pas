@@ -67,12 +67,15 @@ type
     PreviousFrameTime: TimerData;
     epTimer: TEpikTimer;
     numPortsSelected: integer;
+    connected: boolean;
 
     procedure Processdata;
     procedure Status(const s: string);
     procedure DataWaiting(var Message: TLMessage); message WM_DataWaiting;
     procedure CheckSelectedADCPorts;
     function CloseSerialThread: boolean;
+    procedure doConnected;
+    procedure doDisconnected;
   public
     { public declarations }
   end; 
@@ -156,96 +159,97 @@ var
   baud, i: integer;
   err: boolean;
 begin
-  baud := StrToInt(BaudEdit.Text);
-  if (SerialComboBox.Text <> '') and (baud > 0) then
+  if not connected then
   begin
-    connectButton.Enabled := false;
-    if not assigned(SerialThread) then
+    baud := StrToInt(BaudEdit.Text);
+    if (SerialComboBox.Text <> '') and (baud > 0) then
     begin
-      SerialThread := TSerialInterface.Create(SerialComboBox.Text, baud);
+      if not assigned(SerialThread) then
+      begin
+        SerialThread := TSerialInterface.Create(SerialComboBox.Text, baud);
 
-      AskForNewData := false;
-      SerialThread.OnErrorNotify := @self.Status;
-    end;
+        AskForNewData := false;
+        SerialThread.OnErrorNotify := @self.Status;
+      end;
 
-    err := false;
-    SerialThread.SetCommand(cmdEcho);
-    i := 0;
-    repeat
-      Sleep(10);
-      Application.ProcessMessages;
-      inc(i);
-    until (SerialThread.SerialReturnValue > 0) or (i > 100);
-    err := (SerialThread.SerialReturnValue <> cmdEcho);
-
-    if not err then
-    begin
-      SerialThread.SerialReturnValue := 0;
-      SerialThread.SetCommand(cmdSampleCount);
+      err := false;
+      SerialThread.SetCommand(cmdEcho);
       i := 0;
       repeat
         Sleep(10);
         Application.ProcessMessages;
         inc(i);
       until (SerialThread.SerialReturnValue > 0) or (i > 100);
-      err := SerialThread.SerialReturnValue = 0;
-    end;
+      err := (SerialThread.SerialReturnValue <> cmdEcho);
 
-    if not err then
-    begin
-      numsamples := SerialThread.SerialReturnValue;
-      bufsize := CalcDataBufferSize(numsamples);
-      SetLength(buf, bufsize);
-      SetLength(data, numsamples);
-
-      ADCScalerSelector.ItemIndex := 3;
-      cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
-      SerialThread.SetCommand(cmd);
-
-      SerialThread.SerialReturnValue := 0;
-      SerialThread.SetCommand(cmdADCPins);
-      i := 0;
-      repeat
-        Sleep(10);
-        Application.ProcessMessages;
-        inc(i)
-      until (SerialThread.SerialReturnValue > 0) or (i > 100);
-      err := SerialThread.SerialReturnValue = 0;
-    end;
-
-    if not err then
-    begin
-      ADCPortsList.Items.Clear;
-      cmd := SerialThread.SerialReturnValue;
-      for i := 0 to 7 do
+      if not err then
       begin
-        if (cmd and (1 shl i)) > 0 then
-          ADCPortsList.Items.Add(IntToStr(i));
+        SerialThread.SerialReturnValue := 0;
+        SerialThread.SetCommand(cmdSampleCount);
+        i := 0;
+        repeat
+          Sleep(10);
+          Application.ProcessMessages;
+          inc(i);
+        until (SerialThread.SerialReturnValue > 0) or (i > 100);
+        err := SerialThread.SerialReturnValue = 0;
       end;
 
-      // Sync ADC prescaler with Arduino
-      ADCPortsList.Checked[0] := true;
-      CheckSelectedADCPorts;
+      if not err then
+      begin
+        numsamples := SerialThread.SerialReturnValue;
+        bufsize := CalcDataBufferSize(numsamples);
+        SetLength(buf, bufsize);
+        SetLength(data, numsamples);
 
-      // Sync ADC trigger with GUI
-      TriggerOptionsRadioBoxClick(nil);
+        ADCScalerSelector.ItemIndex := 3;
+        cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
+        SerialThread.SetCommand(cmd);
 
-      // Enable GUI elements
-      RunningCheck.Enabled := true;
-      SingleShotCheck.Enabled := true;
-      ADCScalerSelector.Enabled := true;
-      ADCPortsList.Enabled := true;
-      ReferenceVoltageSelector.Enabled := true;
-      TriggerOptionsRadioBox.Enabled := true;
-      TriggerLevelEdit.Enabled := true;
-      Status('Success connecting to '+SerialComboBox.Text);
-    end
-    else
-    begin
-      CloseSerialThread;
-      connectButton.Enabled := true;
-      Status('Error connecting to '+SerialComboBox.Text);
+        SerialThread.SerialReturnValue := 0;
+        SerialThread.SetCommand(cmdADCPins);
+        i := 0;
+        repeat
+          Sleep(10);
+          Application.ProcessMessages;
+          inc(i)
+        until (SerialThread.SerialReturnValue > 0) or (i > 100);
+        err := SerialThread.SerialReturnValue = 0;
+      end;
+
+      if not err then
+      begin
+        ADCPortsList.Items.Clear;
+        cmd := SerialThread.SerialReturnValue;
+        for i := 0 to 7 do
+        begin
+          if (cmd and (1 shl i)) > 0 then
+            ADCPortsList.Items.Add(IntToStr(i));
+        end;
+
+        // Sync ADC prescaler with Arduino
+        ADCPortsList.Checked[0] := true;
+        CheckSelectedADCPorts;
+
+        // Sync ADC trigger with GUI
+        TriggerOptionsRadioBoxClick(nil);
+        doConnected;
+        connected := true;
+      end
+      else
+      begin
+        CloseSerialThread;
+        doDisconnected;
+        Status('Error connecting to '+SerialComboBox.Text);
+        connected := false;
+      end;
     end;
+  end
+  else  // connected, so disconnect now
+  begin
+    CloseSerialThread;
+    doDisconnected;
+    connected := false;
   end;
 end;
 
@@ -281,8 +285,6 @@ begin
   epTimer := TEpikTimer.Create(self);
   if epTimer.HWCapabilityDataAvailable then
     epTimer.TimebaseSource:= HardwareTimebase;
-
-  SerialComboBox.Items.CommaText := GetSerialPortNames;
 
   Chart1.Extent.YMin := 0;
   Chart1.Extent.YMax := 1024;
@@ -428,7 +430,11 @@ procedure TForm1.DataWaiting(var Message: TLMessage);
 var
   localtimedata: TimerData;
 begin
-  SerialThread.PullData(buf);
+  // Check for race condition if serial thread is terminated while main thread is pulling data
+  if Assigned(SerialThread) and AskForNewData then
+    SerialThread.PullData(buf)
+  else
+    exit;
 
   if AskForNewData and not singleShot then
     SerialThread.SetCommand(cmdSendData)
@@ -495,8 +501,8 @@ function TForm1.CloseSerialThread: boolean;
 var
   timeout: integer;
 begin
+  AskForNewData := false;
   running := false;
-  Result := true;
   if Assigned(SerialThread) then
   begin
     SerialThread.WakeUpAndTerminate;
@@ -507,10 +513,42 @@ begin
       Sleep(100);
       dec(timeout);
     end;
-    Result := timeout > 0;
-    if Result then
+    Result := timeout = 0;
+    if not Result then
       FreeAndNil(SerialThread);
   end;
+end;
+
+procedure TForm1.doConnected;
+begin
+  RunningCheck.Enabled := true;
+  RunningCheck.Checked := false;
+  AskForNewData := false;
+  SingleShotCheck.Enabled := true;
+  ADCScalerSelector.Enabled := true;
+  ADCPortsList.Enabled := true;
+  ReferenceVoltageSelector.Enabled := true;
+  TriggerOptionsRadioBox.Enabled := true;
+  TriggerLevelEdit.Enabled := true;
+  SerialComboBox.Enabled := false;
+  BaudEdit.Enabled := false;
+  connectButton.Caption := 'Disconnect';
+  Status('Connected to '+SerialComboBox.Text);
+end;
+
+procedure TForm1.doDisconnected;
+begin
+  RunningCheck.Enabled := false;
+  SingleShotCheck.Enabled := false;
+  ADCScalerSelector.Enabled := false;
+  ADCPortsList.Enabled := false;
+  ReferenceVoltageSelector.Enabled := false;
+  TriggerOptionsRadioBox.Enabled := false;
+  TriggerLevelEdit.Enabled := false;
+  SerialComboBox.Enabled := true;
+  BaudEdit.Enabled := true;
+  connectButton.Caption := 'Connect';
+  Status('Disconnected');
 end;
 
 end.
