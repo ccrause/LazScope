@@ -516,7 +516,9 @@ begin
     Result := timeout = 0;
     if not Result then
       FreeAndNil(SerialThread);
-  end;
+  end
+  else
+    Result := true;
 end;
 
 procedure TForm1.doConnected;
