@@ -189,7 +189,7 @@ begin
   {$IFNDEF WINDOWS}
   FHandle := FpOpen(portName, O_RDWR or O_NOCTTY or O_NONBLOCK);
   {$ELSE}
-  FHandle := SerOpen(aPortName);
+  FHandle := SerOpen('\\.\' + aPortName);
   {$ENDIF}
 
   if {$IFNDEF WINDOWS}(FHandle < 0) {$ELSE} (FHandle = ERROR_INVALID_HANDLE) {$ENDIF} then
