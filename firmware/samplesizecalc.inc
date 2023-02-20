@@ -22,7 +22,7 @@
   MaxADCChannels = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
                    5{$else}2{$endif};
 
-  {$ifdef CPUAVR5}
+  {$if defined(CPUAVR5)}
   samples = ((FPC_SRAMSIZE - 19 - MaxADCChannels - 16 - 2) div 3) * 2;
   {$elseif defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
   samples = ((FPC_SRAMSIZE - 20 - MaxADCChannels - 3 - 34 - 2) div 3) * 2;
