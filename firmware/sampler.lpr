@@ -199,7 +199,7 @@ end;
 
 procedure init();  inline;
 begin
-  uartInit();   // Baud rate can be specified with a define, else it defulats to 115200
+  uartInit();   // Baud rate can be specified with a define, else it defaults to 115200
   avr_sei;
 
   ADCSRA := $86;
