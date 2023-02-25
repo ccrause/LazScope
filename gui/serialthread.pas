@@ -165,8 +165,14 @@ begin
       if cmd = cmdSendData then break;  // wait for main thread to request more data
     end;
 
-    // Clear the event
-    RTLeventResetEvent(FWaitingToProceed);
+    // Clear the event if there are no commands waiting
+    System.EnterCriticalsection(rcSection);
+    try
+      if FCmdBuffer.Count = 0 then
+        RTLeventResetEvent(FWaitingToProceed);
+    finally
+      System.LeaveCriticalsection(rcSection);
+    end;
 
     // Now wait for next event, but only if not terminated
     if not Terminated then
