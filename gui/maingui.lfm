@@ -6,14 +6,15 @@ object Form1: TForm1
   Caption = 'Lazarus Oscilloscope'
   ClientHeight = 494
   ClientWidth = 1050
+  FormStyle = fsStayOnTop
   OnClose = FormClose
   OnShow = FormShow
   Position = poDesktopCenter
-  LCLVersion = '2.0.12.0'
+  LCLVersion = '2.2.4.0'
   Visible = True
   object Chart1: TChart
     Left = 0
-    Height = 470
+    Height = 471
     Top = 0
     Width = 818
     AxisList = <    
@@ -53,12 +54,12 @@ object Form1: TForm1
   end
   object Panel1: TPanel
     Left = 818
-    Height = 470
+    Height = 471
     Top = 0
     Width = 232
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 470
+    ClientHeight = 471
     ClientWidth = 232
     TabOrder = 1
     object RunningCheck: TCheckBox
@@ -92,7 +93,7 @@ object Form1: TForm1
     end
     object BaudEdit: TEdit
       Left = 136
-      Height = 26
+      Height = 25
       Top = 32
       Width = 80
       TabOrder = 3
@@ -116,7 +117,7 @@ object Form1: TForm1
     end
     object SerialComboBox: TComboBox
       Left = 8
-      Height = 28
+      Height = 27
       Top = 32
       Width = 113
       ItemHeight = 0
@@ -240,7 +241,7 @@ object Form1: TForm1
     end
     object ReferenceVoltageSelector: TComboBox
       Left = 115
-      Height = 28
+      Height = 27
       Top = 288
       Width = 99
       Enabled = False
@@ -273,7 +274,7 @@ object Form1: TForm1
     end
     object ADCScalerSelector: TComboBox
       Left = 8
-      Height = 28
+      Height = 27
       Top = 288
       Width = 82
       Enabled = False
@@ -294,7 +295,7 @@ object Form1: TForm1
     end
     object TriggerLevelEdit: TSpinEdit
       Left = 8
-      Height = 26
+      Height = 25
       Top = 216
       Width = 69
       Enabled = False
@@ -302,13 +303,13 @@ object Form1: TForm1
       MaxValue = 1024
       OnChange = TriggerOptionsRadioBoxClick
       TabOrder = 9
-      Value = 512
+      Value = 128
     end
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Height = 24
-    Top = 470
+    Height = 23
+    Top = 471
     Width = 1050
     BorderWidth = 1
     Panels = <    

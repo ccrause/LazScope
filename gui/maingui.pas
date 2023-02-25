@@ -103,7 +103,7 @@ const
 
 function CalcDataBufferSize(const SampleCount: integer): integer;
 begin
-  result := 3*(SampleCount div 2) + 2*(SampleCount and 1) + 4 + 1;
+  result := SampleCount + 4 + 1;
 end;
 
 procedure TForm1.RunningCheckChange(Sender: TObject);
@@ -260,7 +260,7 @@ end;
 
 procedure TForm1.SingleShotCheckChange(Sender: TObject);
 begin
-  singleShot :=  SingleShotCheck.Checked;
+  singleShot := SingleShotCheck.Checked;
 end;
 
 procedure TForm1.ADCPortsListClick(Sender: TObject);
@@ -287,7 +287,7 @@ begin
     epTimer.TimebaseSource:= HardwareTimebase;
 
   Chart1.Extent.YMin := 0;
-  Chart1.Extent.YMax := 1024;
+  Chart1.Extent.YMax := 256;
   Chart1.Extent.UseYMin := true;
   Chart1.Extent.UseYMax := true;
   Chart1.Extent.XMin := 0;
@@ -306,7 +306,6 @@ begin
   SerialThread.SetCommand(cmd);
 end;
 
-
 procedure TForm1.ReferenceVoltageSelectorChange(Sender: TObject);
 var
   cmd: byte;
@@ -322,12 +321,12 @@ begin
   case TriggerOptionsRadioBox.ItemIndex of
   1: begin
        SerialThread.SetCommand(cmdTriggerRising);
-       val := TriggerLevelEdit.Value shr 2;
+       val := TriggerLevelEdit.Value;
        SerialThread.SetCommand(val);
      end;
   2: begin
        SerialThread.SetCommand(cmdTriggerFalling);
-       val := TriggerLevelEdit.Value shr 2;
+       val := TriggerLevelEdit.Value;
        SerialThread.SetCommand(val);
      end;
   else
@@ -346,37 +345,20 @@ begin
 
   for i := 0 to length(data)-1 do
   begin
-    j := 3*(i shr 1) + (i mod 2);
-
-    h := buf[j];
-    l := buf[j+1];
-    if (i mod 2) = 0 then  // left adjusted
-    begin
-      t := h shl 2 + l shr 6;
-      data[i] := t;
-      checksum := checksum XOR buf[j];
-      checksum := checksum XOR buf[j + 1];
-    end
-    else  // right adjusted
-    begin
-      t := (h and %00000011);
-      t := t shl 8;
-      t := t + l;
-      data[i] := t;
-      checksum := checksum XOR buf[j+1];
-    end;
+    data[i] := buf[i];
+    checksum := checksum XOR buf[i];
   end;
 
   // Time frame in microseconds
-  j := 3*(numsamples div 2) + (numsamples mod 2);
-  t := (buf[j + 0] shl 24);
-  t := t + (buf[j + 1] shl 16);
-  t := t + (buf[j + 2] shl 8);
-  t := t + buf[j + 3];
-  checksum := checksum XOR buf[j + 0];
-  checksum := checksum XOR buf[j + 1];
-  checksum := checksum XOR buf[j + 2];
-  checksum := checksum XOR buf[j + 3];
+  i := length(data);
+  t := (buf[i + 0] shl 24) +
+       (buf[i + 1] shl 16) +
+       (buf[i + 2] shl 8) +
+       buf[i + 3];
+  checksum := checksum XOR buf[i + 0];
+  checksum := checksum XOR buf[i + 1];
+  checksum := checksum XOR buf[i + 2];
+  checksum := checksum XOR buf[i + 3];
 
   TimeFrame := t / 1000;  // convert to milliseconds
   StatusBar1.Panels[1].Text := FloatToStrF(TimeFrame, ffFixed, 3, 2);
@@ -388,14 +370,14 @@ begin
     Chart1.Extent.XMax := round(TimeFrame + 0.5);
 
   // Check checksum:
-  checksum := checksum XOR buf[j + 4];
+  checksum := checksum XOR buf[i + 4];
 
   if numPortsSelected = 0 then exit;
 
-  for j := 0 to numPortsSelected-1 do
+  for i := 0 to numPortsSelected-1 do
   begin
-    TLineSeries(Chart1.Series[j]).Clear;
-    TLineSeries(Chart1.Series[j]).BeginUpdate;
+    TLineSeries(Chart1.Series[i]).Clear;
+    TLineSeries(Chart1.Series[i]).BeginUpdate;
   end;
 
   delta := TimeFrame / (numsamples-1);
@@ -408,8 +390,8 @@ begin
       j := 0;
   end;
 
-  for j := 0 to numPortsSelected-1 do
-    TLineSeries(Chart1.Series[j]).EndUpdate;
+  for i := 0 to numPortsSelected-1 do
+    TLineSeries(Chart1.Series[i]).EndUpdate;
 
   if checksum = 0 then
     Status('OK')

@@ -5,21 +5,20 @@ uses
 
 const
   {$include samplesizecalc.inc}
-  // 3 bytes per 2 samples + 2 bytes per odd sample, 4 bytes deltaTime, 1 byte checksum
-  BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
+  // 1 byte per sample, 4 bytes deltaTime, 1 byte checksum
+  BUFSIZE = samples + 4 + 1;
 
   // ADC ADMUX constants mask - different for atmega/attiny
   ADCVoltageVcc  = {$ifdef CPUAVR5}4{$else}0{$endif} shl 4;
   ADCVoltage1_1  = {$ifdef CPUAVR5}12{$else}8{$endif} shl 4;
   ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif} shl 4;
 
+  // ADLAR bit in ADCMUX hi nibble
+  ADCleftAdjust = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}2 shl 4
+                  {$else}0{$endif};
 type
-  TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
+  TTriggerFunc = function(const value1, value2: byte): boolean;  // pointer to trigger check function
   TDataBuf = array[0..BUFSIZE-1] of byte;
-
-  TWordAsBytes = packed record
-    l, h: byte;
-  end;
 
 var
   databuf: TDataBuf; // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
@@ -27,9 +26,9 @@ var
   ADMUXhiMask: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
-  triggerlevel: uint16 = 512;  // Trigger threshold
+  triggerlevel: byte = 128;  // Trigger threshold
   rollovercount: uint16 = samples; // continue if trigger didn't fire after so many counts
-  triggerInit: word;  // value used to ensure first trigger check is untrue, eliminates a boolean check
+  triggerInit: byte;  // value used to ensure first trigger check is untrue, eliminates a boolean check
 
   ADMUXVector: array[0..MaxADCChannels-1] of byte;
   numChannels: uint8;
@@ -48,13 +47,13 @@ begin
 end;
 
 // v1 is new value, v2 is old value
-function checkTriggerRising(const value1, value2: uint16): boolean;
+function checkTriggerRising(const value1, value2: byte): boolean;
 begin
   Result := (triggerlevel <= value1 {>= triggerlevel}) and (triggerlevel > value2 {< triggerlevel});
 end;
 
 // v1 is new value, v2 is old value
-function checkTriggerFalling(const value1, value2: uint16): boolean;
+function checkTriggerFalling(const value1, value2: byte): boolean;
 begin
   Result := (value1 <= triggerlevel) and (value2 > triggerlevel);
 end;
@@ -117,9 +116,12 @@ end;
 procedure gatherData;
 var
   nextChannelIndex: byte;
-  lowbyte, hibyte: byte;
-  v1, v2, i, j: word;
+  v1, v2: byte;
+  i: word;
 begin
+  {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+  ADCSRB := 1 shl ADLAR;
+  {$endif}
   v1 := triggerInit;
   i := 0;
   nextChannelIndex := 0;
@@ -129,10 +131,7 @@ begin
     inc(i);
     v2 := v1;
     while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
-    lowbyte := ADCL;
-    hibyte := ADCH;
-    TWordAsBytes(v1).h := hibyte;
-    TWordAsBytes(v1).l := lowbyte;
+    v1 := ADCH;
     if (triggerCheck = nil) or triggerCheck(v1, v2) then
       Break;
   until (i > rollovercount);
@@ -147,36 +146,14 @@ begin
     ADCSRA := ADCSRA or (1 shl ADSC); // start the conversion
 
     nextPortChannel(nextChannelIndex);
-    j := i + (i div 2);
-    if (i and 1) = 0 then
-    begin
-      databuf[j] := (hibyte shl 6) or (lowbyte shr 2);
-      databuf[j+1] := (lowbyte and 3) shl 6;
-    end
-    else
-    begin
-      databuf[j] := databuf[j] or hibyte;
-      databuf[j+1] := lowbyte;
-    end;
-
+    databuf[i] := v1;
     inc(i);
     while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
-    lowbyte := ADCL;
-    hibyte := ADCH;
+    v1 := ADCH;
   end;
 
   time := stopGetTimeMicros();
-  j := i + (i div 2);
-  if (i and 1) = 0 then
-  begin
-    databuf[j] := (hibyte shl 6) or (lowbyte shr 2);
-    databuf[j+1] := (lowbyte and 3) shl 6;
-  end
-  else
-  begin
-    databuf[j] := databuf[j] or hibyte;
-    databuf[j+1] := lowbyte;
-  end;
+  databuf[i] := v1;
 end;
 
 // Call this to update MUX with new voltage reference
@@ -203,7 +180,7 @@ begin
   avr_sei;
 
   ADCSRA := $86;
-  ADMUXhiMask := ADCVoltageVcc; // Vcc + left adjust
+  ADMUXhiMask := ADCVoltageVcc or ADCleftAdjust; // Vcc + left adjust
 
   // Set up A0 as default selected channels
   ADMUXVector[0] := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
@@ -259,17 +236,17 @@ begin
    // Reference voltage
     cmdADCVoltage_VCC:
       begin
-        ADMUXhiMask := ADCVoltageVcc;  // Vcc
+        ADMUXhiMask := ADCVoltageVcc or ADCleftAdjust;  // Vcc
         updateADMUXVector();
       end;
     cmdADCVoltage_1_1:
       begin
-        ADMUXhiMask := ADCVoltage1_1;  // 1.1 V
+        ADMUXhiMask := ADCVoltage1_1 or ADCleftAdjust;  // 1.1 V
         updateADMUXVector();
       end;
     cmdADCVoltage_AREF:
       begin
-        ADMUXhiMask := ADCVoltageARev;// Aref pin
+        ADMUXhiMask := ADCVoltageARev or ADCleftAdjust;// Aref pin
         updateADMUXVector();
       end;
 
@@ -306,8 +283,8 @@ begin
         uartTransmit(cmd);  // Trigger on rising edge
         triggerCheck := @checkTriggerRising;
         cmd := uartReceive();  // trigger value divided by 4
-        triggerlevel := word(cmd) shl 2;
-        triggerInit := 1023;
+        triggerlevel := cmd;
+        triggerInit := 255;
       end;
 
     cmdTriggerFalling:
@@ -315,7 +292,7 @@ begin
         uartTransmit(cmd);  // Trigger on falling edge
         triggerCheck := @checkTriggerFalling;
         cmd := uartReceive();  // trigger value divided by 4
-        triggerlevel := word(cmd) shl 2;
+        triggerlevel := cmd;
         triggerInit := 0;
       end;
 
