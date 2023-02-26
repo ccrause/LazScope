@@ -3,12 +3,11 @@ FPC/Lazarus serial oscilloscope
 A simple oscilloscope project which reads ADC data buffers from an Arduino Uno (can be adapted for other AVR controllers) via a serial connection.  This data gets displayed on a PC screen via a FPC/Lazarus GUI.
 
 ## Firmware
-The ADC prescaler gets configured via the GUI to a value in the range 2 ... 128.  This prescaler divides the controller clock which drives the ADC. For example the Arduino Uno runs at 16 MHz, resulting in a sample acquisition time of around 1.6 to 100 microseconds. Note that the atmega328p datasheet recommends a limit of 200 kHz clock to the ADC (about 65 microseconds acquisition time) to achieve maximum accuracy.  A prescaler of 64 is slightly beyond the specification, but still gives excellent visual preformance, even a prescaler of 32 looks visually OK.
+The ADC prescaler gets configured via the GUI to a value in the range 2 ... 128.  This prescaler divides the controller clock which drives the ADC. For example the Arduino Uno runs at 16 MHz, resulting in a sample acquisition time of around 1.6 to 100 microseconds. Note that the atmega328p datasheet recommends a limit of 200 kHz clock to the ADC (about 65 microseconds acquisition time) to achieve maximum accuracy.  A prescaler of 64 is slightly beyond the specification, but still gives excellent visual performance, even a prescaler of 32 looks visually OK.
 
 The firmware implements elementary trigger functionality.  Either a rising or falling slope with a threshold value can be selected.  The trigger logic takes a significant amount of time relative to the sample time, hence the decision to only trigger at the start.  This means that the interval between the 1st and 2nd data point may be slightly longer than subsequent intervals due to this.
 
-The ADC produces 10 bit results.  To preserve this precision and to reduce data storage space a sample point is stored in 12 bits.  This results in 3 bytes storage required per 2 samples.  The data is stored as follows:
-The first sample is left aligned so that the right-most 6 bits of the 2nd byte is unused.  The 2nd sample is the stored right aligned, with the high 2 bits stored in the 2nd byte and the low 8 bits stored in the 3rd byte. This leaves 4 bits unused which is a compromise between data storage efficiency and computational effort to pack the samples.
+The ADC produces 10 bit results, however to reduce data storage space only the upper 8 bits of the ADC result is stored.
 
 Multiple ADC channels can be selected.  The firmware will then cycle the multiplexer through the channels in fixed sequence.
 
