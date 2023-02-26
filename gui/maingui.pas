@@ -70,7 +70,7 @@ type
     connected: boolean;
 
     procedure Processdata;
-    procedure Status(const s: string);
+    procedure Status(const s: string; stopRun: boolean);
     procedure DataWaiting(var Message: TLMessage); message WM_DataWaiting;
     procedure CheckSelectedADCPorts;
     function CloseSerialThread: boolean;
@@ -240,7 +240,7 @@ begin
       begin
         CloseSerialThread;
         doDisconnected;
-        Status('Error connecting to '+SerialComboBox.Text);
+        Status('Error connecting to '+SerialComboBox.Text, true);
         connected := false;
       end;
     end;
@@ -273,7 +273,7 @@ begin
   CloseAction := caFree;
   if not CloseSerialThread then
   begin
-    Status('Could not close serial thread, calling Halt');
+    Status('Could not close serial thread, calling Halt', false);
     Application.ProcessMessages;
     Sleep(1500);
     Halt(255);
@@ -394,18 +394,26 @@ begin
     TLineSeries(Chart1.Series[i]).EndUpdate;
 
   if checksum = 0 then
-    Status('OK')
+    Status('OK', false)
   else
   begin
-    Status('Checksum failed');
+    // Do not stop, could be a temporary problem
+    Status('Checksum failed', false);
     Application.ProcessMessages;
     Sleep(100);
   end;
 end;
 
-procedure TForm1.Status(const s: string);
+procedure TForm1.Status(const s: string; stopRun: boolean);
 begin
   StatusBar1.Panels[6].Text := s;
+
+  // An error (e.g. time-out) interrupted data flow
+  if stopRun then
+  begin
+    RunningCheck.Checked := false;
+    AskForNewData := false;
+  end;
 end;
 
 procedure TForm1.DataWaiting(var Message: TLMessage);
@@ -517,7 +525,7 @@ begin
   SerialComboBox.Enabled := false;
   BaudEdit.Enabled := false;
   connectButton.Caption := 'Disconnect';
-  Status('Connected to '+SerialComboBox.Text);
+  Status('Connected to '+SerialComboBox.Text, false);
 end;
 
 procedure TForm1.doDisconnected;
@@ -532,7 +540,7 @@ begin
   SerialComboBox.Enabled := true;
   BaudEdit.Enabled := true;
   connectButton.Caption := 'Connect';
-  Status('Disconnected');
+  Status('Disconnected', true);
 end;
 
 end.

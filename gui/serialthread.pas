@@ -9,7 +9,7 @@ uses
 
 type
   TDataBuffer = TByteDynArray;
-  TStatusNotify = procedure(const s: string) of object;
+  TStatusNotify = procedure(const s: string; stopRun: boolean) of object;
 
   { TSerialInterface }
 
@@ -19,6 +19,7 @@ type
     FSerial: TSerialObj;
     FData: TDataBuffer;
     FErrorMessage: string;
+    FAbort: boolean;
     FError: TStatusNotify;
     FWaitingToProceed: PRTLEvent;
     rcSection: TRTLCriticalSection;
@@ -68,7 +69,7 @@ end;
 procedure TSerialInterface.PushError;
 begin
   if assigned(FError) then
-    FError(FErrorMessage);
+    FError(FErrorMessage, FAbort);
 end;
 
 procedure TSerialInterface.SendCommandWaitForResponse(const cmd: byte);
@@ -83,13 +84,14 @@ begin
 
   if cmd = cmdSendData then
   begin
-    recv := FSerial.ReadTimeout(FData[0], bufsize, 1000);
+    recv := FSerial.ReadTimeout(FData[0], bufsize, 3000);
     if recv < bufsize then // retry for remaining data
-      recv := recv + FSerial.ReadTimeout(FData[recv], (bufsize - recv), 2000);
+      recv := recv + FSerial.ReadTimeout(FData[recv], (bufsize - recv), 3000);
 
     if (recv < bufsize) then
     begin
       FErrorMessage := 'Comms timeout';
+      FAbort := true;
       Synchronize(@PushError);
     end
     else
@@ -138,6 +140,7 @@ begin
     if (reply XOR cmd) <> 0 then   // echo mismatch
     begin
       FErrorMessage := 'Invalid reply echo';
+      FAbort := false;
       Synchronize(@PushError);
     end;
   end;
