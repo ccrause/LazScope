@@ -243,6 +243,8 @@ var
 begin
   cmd := uartReceive();
 
+  // Note: all non-data request commands should be echoed
+  // This is handled by transmitting the cmd variable at the end of this procedure
   case cmd of
     // ADC pins (PC0..PC5 for atmega328p, PB1..PB3 for attiny}
     cmdADCPins: cmd := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
@@ -288,7 +290,7 @@ begin
         databuf[BUFSIZE-1] := b;
 
         uartWriteBuffer(databuf);
-        exit; // no further return data required;
+        exit; // Do not echo cmd
       end;
 
     // Return number of samples in buffer
@@ -303,18 +305,18 @@ begin
 
     cmdTriggerRising:
       begin
-        uartTransmit(cmd);  // Trigger on rising edge
+        uartTransmit(cmd);
         triggerCheck := @checkTriggerRising;
-        cmd := uartReceive();  // trigger value divided by 4
+        cmd := uartReceive();
         triggerlevel := word(cmd) shl 2;
         triggerInit := 1023;
       end;
 
     cmdTriggerFalling:
       begin
-        uartTransmit(cmd);  // Trigger on falling edge
+        uartTransmit(cmd);
         triggerCheck := @checkTriggerFalling;
-        cmd := uartReceive();  // trigger value divided by 4
+        cmd := uartReceive();
         triggerlevel := word(cmd) shl 2;
         triggerInit := 0;
       end;
@@ -322,7 +324,7 @@ begin
     // Read the selected ports for ADC
     cmdSelectPorts:
       begin
-        uartTransmit(cmd); // All non-data request commands should be echoed
+        uartTransmit(cmd);
         cmd := uartReceive();
         numChannels := 0;
         for b := 0 to 7 do
