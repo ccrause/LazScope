@@ -125,22 +125,35 @@ begin
   nextChannelIndex := 0;
   repeat
     ADMUX := ADMUXVector[nextChannelIndex];
-    ADCSRA := ADCSRA or (1 shl ADSC); // $40;
-    inc(i);
+    ADCSRA := ADCSRA or (1 shl ADSC);
     v2 := v1;
-    while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
+    while ((ADCSRA and (1 shl ADSC)) > 0) do;
     lowbyte := ADCL;
     hibyte := ADCH;
     TWordAsBytes(v1).h := hibyte;
     TWordAsBytes(v1).l := lowbyte;
-    if (triggerCheck = nil) or triggerCheck(v1, v2) then
+
+    if (triggerCheck = nil) then
+      Break
+    else if triggerCheck(v1, v2) then
+    begin
+      databuf[0] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
+      databuf[1] := (TWordAsBytes(v2).l and 3) shl 6;
+      i := 1;
       Break;
-  until (i > rollovercount);
+    end;
+
+    inc(i);
+    if i > rollovercount then
+    begin
+      i := 0;
+      Break;
+    end;
+  until false;
 
   // Start with normal reading
   nextPortChannel(nextChannelIndex);
   startTimer();
-  i := 0;
   while i < samples-1 do
   begin
     ADMUX := ADMUXVector[nextChannelIndex];
