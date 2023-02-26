@@ -115,14 +115,24 @@ end;
 
 // Read ADC and pack data buffer
 procedure gatherData;
+const
+  timeout1 = 4*F_CPU div 13;
 var
   nextChannelIndex: byte;
   lowbyte, hibyte: byte;
-  v1, v2, i, j: word;
+  v1, v2, i, j, timeoutcount: word;
 begin
+  // Aim for a timeout of ~ 4 seconds or at most 65535 counts
+  timeoutcount := word(uint32(timeout1) shr 16) shr (ADCSRA and $07);
+  if timeoutcount > 0 then
+    timeoutcount := $FFFE
+  else
+    timeoutcount := uint32(timeout1) shr (ADCSRA and $07);
+
   v1 := triggerInit;
   i := 0;
   nextChannelIndex := 0;
+
   repeat
     ADMUX := ADMUXVector[nextChannelIndex];
     ADCSRA := ADCSRA or (1 shl ADSC);
@@ -144,7 +154,8 @@ begin
     end;
 
     inc(i);
-    if i > rollovercount then
+    // Abort waiting for trigger after too many counts
+    if i >= timeoutcount then
     begin
       i := 0;
       Break;
