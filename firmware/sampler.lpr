@@ -27,7 +27,6 @@ var
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
   triggerlevel: byte = 128;  // Trigger threshold
-  rollovercount: uint16 = samples; // continue if trigger didn't fire after so many counts
   triggerInit: byte;  // value used to ensure first trigger check is untrue, eliminates a boolean check
 
   ADMUXVector: array[0..MaxADCChannels-1] of byte;
@@ -114,17 +113,27 @@ end;
 
 // Read ADC and pack data buffer
 procedure gatherData;
+const
+  timeout1 = 4*F_CPU div 13;
 var
   nextChannelIndex: byte;
   v1, v2: byte;
-  i: word;
+  i, timeoutcount: word;
 begin
+  // Aim for a timeout of ~ 4 seconds or at most 65535 counts
+  timeoutcount := word(uint32(timeout1) shr 16) shr (ADCSRA and $07);
+  if timeoutcount > 0 then
+    timeoutcount := $FFFE
+  else
+    timeoutcount := uint32(timeout1) shr (ADCSRA and $07);
+
   {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
   ADCSRB := 1 shl ADLAR;
   {$endif}
   v1 := triggerInit;
   i := 0;
   nextChannelIndex := 0;
+
   repeat
     ADMUX := ADMUXVector[nextChannelIndex];
     ADCSRA := ADCSRA or (1 shl ADSC);
@@ -142,7 +151,8 @@ begin
     end;
 
     inc(i);
-    if i > rollovercount then
+    // Abort waiting for trigger after too many counts
+    if i >= timeoutcount then
     begin
       i := 0;
       Break;
@@ -160,7 +170,7 @@ begin
     nextPortChannel(nextChannelIndex);
     databuf[i] := v1;
     inc(i);
-    while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
+    while ((ADCSRA and (1 shl ADSC)) > 0) do;
     v1 := ADCH;
   end;
 
