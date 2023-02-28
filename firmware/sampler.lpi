@@ -58,7 +58,8 @@
 -Sm
 -Si
 -dF_CPU:=16000000
--dBAUD:=115200"/>
+-dBAUD:=115200
+-al"/>
             <CompilerPath Value="/home/christo/fpc/installs/lib/fpc/3.3.1/ppcrossavr"/>
             <ExecuteBefore>
               <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
@@ -107,8 +108,6 @@
             </Verbosity>
             <WriteFPCLogo Value="False"/>
             <ConfigFile>
-              <DontUseConfigFile Value="True"/>
-              <CustomConfigFile Value="True"/>
               <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
             </ConfigFile>
             <CustomOptions Value="-Wpattiny24
@@ -117,7 +116,7 @@
 -Si
 -dF_CPU:=8000000
 -dBAUD:=115200"/>
-            <CompilerPath Value="/home/christo/fpc/3.3.1/compiler/ppcrossavr"/>
+            <CompilerPath Value="/home/christo/fpc/installs/lib/fpc/3.3.1/ppcrossavr"/>
             <ExecuteBefore>
               <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
               <CompileReasons Compile="False" Build="False" Run="False"/>
