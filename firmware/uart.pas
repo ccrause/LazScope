@@ -122,7 +122,6 @@ const
   LoopCount = (RXDelay - 6 + 2) div 3;
 {$endif}
 
-// Force known storage for a byte value, by declaring it a parameter to ISR
 {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
 procedure PCINT0; interrupt; public name 'PCINT0_ISR';
 {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
@@ -243,7 +242,7 @@ asm
   out PORTB+(-32), r20
   brne TxLoop                 // loop until r24 is zero
   cbi DDRB+(-32), TXPin       // Input
-  sbi PORTB+(-32), TXPin       // Pullup
+  sbi PORTB+(-32), TXPin      // Pullup
   // Epilogue
   out 0x3f, r0
 end;
