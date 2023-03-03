@@ -145,7 +145,7 @@ begin
 
     if (triggerCheck = nil) then
       Break
-    else if triggerCheck(v1, v2) then
+    else if triggerCheck(v1, v2) or (i >= timeoutcount) then
     begin
       databuf[0] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
       databuf[1] := (TWordAsBytes(v2).l and 3) shl 6;
@@ -154,12 +154,6 @@ begin
     end;
 
     inc(i);
-    // Abort waiting for trigger after too many counts
-    if i >= timeoutcount then
-    begin
-      i := 0;
-      Break;
-    end;
   until false;
 
   // Start with normal reading
