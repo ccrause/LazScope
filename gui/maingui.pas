@@ -403,7 +403,11 @@ begin
   for i := 0 to numsamples-1 do
   begin
     TLineSeries(Chart1.Series[j]).AddXY(delta*i, data[i]);
-    inc(j);
+    // Waiting for trigger condition gives two data points for the first channel
+    // So add the first two data points to the first series
+    if (i > 0) or (TriggerOptionsRadioBox.ItemIndex = 0) or (numPortsSelected = 1) then
+      inc(j);
+
     if j = numPortsSelected then
       j := 0;
   end;
