@@ -1,5 +1,5 @@
 { Total memory required for global variables:
-  Databuf      : 3*(samples div 2) + 2*(samples and 1) + 4 + 1
+  Databuf      : 3*(samples div 2) + 2*(samples and 1) + 2 + 4 + 1
   time         : 4
   ADMUXhiMask  : 1
   triggerCheck : 2
@@ -13,7 +13,7 @@
   Total        = 19 (20 for tinyX5) + 3*(samples div 2) + 2*(samples and 1) + MaxADCChannels + 3 (tinyX4/X5)
 
   Stack requirements
-  AVR5: 2 + 14 bytes to call gatherData = 16 bytes
+  AVR5: 2 + 16 bytes to call gatherData = 18 bytes
   tinyX4/X5: 2 + 14 bytes to call gatherData + 2 + 16 bytes PCINT1 = 34 bytes
 }
 
@@ -22,13 +22,35 @@
   MaxADCChannels = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
                    5{$else}2{$endif};
 
+  // Global variables excluding data buffer
   {$if defined(CPUAVR5)}
-  samples = ((FPC_SRAMSIZE - 19 - MaxADCChannels - 16 - 2) div 3) * 2;
+  GlobalVariables = 19;
   {$elseif defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
-  samples = ((FPC_SRAMSIZE - 20 - MaxADCChannels - 3 - 34 - 2) div 3) * 2;
+  GlobalVariables = 20;
   {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
-  samples = ((FPC_SRAMSIZE - 19 - MaxADCChannels - 3 - 34 - 2) div 3) * 2;
+  GlobalVariables = 19;
   {$else}
     {$error 'Unsupported controller specified, no predefined sample size calculated!'}
   {$endif}
+
+  // Space required for stack
+  {$if defined(CPUAVR5)}
+  MaxStackSize = 18;
+  {$elseif defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
+  MaxStackSize = 34;
+  {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+  MaxStackSize = 34;
+  {$endif}
+
+  // Space left for data buffer
+  BufferSize8bit = FPC_SRAMSIZE - GlobalVariables - MaxStackSize;
+
+  // Note: 7 bytes at end reserved for information
+  NumSamples8bit = BufferSize8bit - 7;
+
+// Number of 10 bit samples to fit into buffer
+  // 3 bytes per 2x 10 bit samples, plus 1 sample if 2 bytes are left
+  NumSamples10bit = (NumSamples8bit div 3) * 2 + ((NumSamples8bit mod 3) shr 1);
+  // Actual 10 bit buffer size
+  BufferSize10bit = (NumSamples10bit div 2)*3 + (NumSamples10bit and 1)*2 + 7;
 

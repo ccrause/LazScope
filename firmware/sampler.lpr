@@ -5,8 +5,6 @@ uses
 
 const
   {$include samplesizecalc.inc}
-  // 3 bytes per 2 samples + 2 bytes per odd sample, 4 bytes deltaTime, 1 byte checksum
-  BUFSIZE = 3*(samples div 2) + 2*(samples and 1) + 4 + 1;
 
   // ADC ADMUX constants mask - different for atmega/attiny
   ADCVoltageVcc  = {$ifdef CPUAVR5}4{$else}0{$endif} shl 4;
@@ -151,8 +149,8 @@ begin
       Break
     else if triggerCheck(v1, v2) or (i >= timeoutcount) then
     begin
-      databuf[0] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
-      databuf[1] := (TWordAsBytes(v2).l and 3) shl 6;
+      databuf[2] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
+      databuf[3] := (TWordAsBytes(v2).l and 3) shl 6;
       i := 1;
       Break;
     end;
@@ -163,13 +161,13 @@ begin
   // Start with normal reading
   nextPortChannel(nextChannelIndex);
   startTimer();
-  while i < samples-1 do
+  while i < NumSamples10bit-1 do
   begin
     ADMUX := ADMUXVector[nextChannelIndex];
     ADCSRA := ADCSRA or (1 shl ADSC); // start the conversion
 
     nextPortChannel(nextChannelIndex);
-    j := i + (i div 2);
+    j := 2 + i + (i div 2);
     if (i and 1) = 0 then
     begin
       databuf[j] := (hibyte shl 6) or (lowbyte shr 2);
@@ -188,7 +186,7 @@ begin
   end;
 
   time := stopGetTimeMicros();
-  j := i + (i div 2);
+  j := i + (i div 2) + 2;
   if (i and 1) = 0 then
   begin
     databuf[j] := (hibyte shl 6) or (lowbyte shr 2);
@@ -211,11 +209,11 @@ begin
     ADMUXVector[i] := ADMUXhiMask or (ADMUXVector[i] and $0F);// + channels[i];
 end;
 
-procedure uartWriteBuffer(constref data: TDataBuf);
+procedure uartWriteBuffer(constref data: TDataBuf10bit);
 var
   i: uint16;
 begin
-  for i := 0 to BUFSIZE-1 do
+  for i := 0 to BufferSize10bit-1 do
     uartTransmit(data[i]);
 end;
 
@@ -299,17 +297,54 @@ begin
 
     cmdSendData:
       begin
+        // Voltage reference: 0 = external (Vcc, Aref etc.), 1 = 1.1 V, 2 = 2.56 V
+        Databuf[0] := 0;
+        {$if defined(CPUAVR5)}
+        if (ADMUXhiMask and $C0) = $C0 then
+          Databuf[0] := 1;
+        {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+        if ADMUXhiMask and $C0 = $80 then
+          Databuf[0] := 1;
+        {$elseif defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
+        case (ADMUXhiMask and $D0) of
+          $80: Databuf[0] := 1;
+          $90, $D0: Databuf[0] := 2;
+        end;
+        {$endif}
+
+        // 10 bit samples?
+        // If ADLAR bit is set, then in 8 bit data mode
+        {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+        if (ADCSRB and (1 shl ADLAR)) = 0 then
+        {$else}
+        if (ADMUX and (1 shl ADLAR)) = 0 then
+        {$endif}
+          Databuf[0] := Databuf[0] or tenBitFlagMask;
+
+        // Trigger?
+        if triggerCheck <> nil then
+          Databuf[0] := Databuf[0] or triggerMask;
+
+        // Active channels
+        Databuf[1] := 0;
+        for b := 0 to numChannels-1 do
+        begin
+          i := (ADMUXVector[b] and $0F);
+          Databuf[1] := Databuf[1] or byte(1 shl byte(i));
+        end;
+
         gatherData();
-        databuf[BUFSIZE - 5] := time shr 24;
-        databuf[BUFSIZE - 4] := (time and $00FF0000) shr 16;
-        databuf[BUFSIZE - 3] := (time and $0000FF00) shr 8;
-        databuf[BUFSIZE - 2] := time and $000000FF;
 
+        databuf[BufferSize10bit - 5] := time shr 24;
+        databuf[BufferSize10bit - 4] := (time and $00FF0000) shr 16;
+        databuf[BufferSize10bit - 3] := (time and $0000FF00) shr 8;
+        databuf[BufferSize10bit - 2] := time and $000000FF;
+
+        // XOR data checksum
         b := 0;
-        for i := 0 to BUFSIZE-2 do
+        for i := 0 to BufferSize10bit-2 do
           b := b xor databuf[i];
-
-        databuf[BUFSIZE-1] := b;
+        databuf[BufferSize10bit-1] := b;
 
         uartWriteBuffer(databuf);
         exit; // Do not echo cmd
@@ -318,8 +353,8 @@ begin
     // Return number of samples in buffer
     cmdSampleCount:
       begin
-        uartTransmit(byte(samples and $FF));  // LSB
-        cmd := (samples shr 8);
+        uartTransmit(byte(BufferSize10bit and $FF));  // LSB
+        cmd := (BufferSize10bit shr 8);
       end;
 
     // Set trigger options

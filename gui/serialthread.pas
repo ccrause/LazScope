@@ -103,7 +103,7 @@ begin
     FSerial.ReadByteTimeout(v2, 500);
 
     SerialReturnValue := v1 + (v2 shl 8);
-    SetLength(FData, CalcDataBufferSize(SerialReturnValue));
+    SetLength(FData, SerialReturnValue);
   end
   else if cmd = cmdADCPins then
   begin

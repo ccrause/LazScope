@@ -54,6 +54,14 @@ const
   // Command should be followed by bitmap of ports
   cmdSelectPorts       = 254;
 
+  // Data descriptors offsets in data block
+  dataSettingsOffset  = 0;
+  dataChannelsOffset  = 1;
+  dataOffset          = 2;
+  // Masks to indicate specific configuration bits
+  tenBitFlagMask      = 1 shl 7;
+  triggerMask         = 1 shl 6;
+
 implementation
 
 end.

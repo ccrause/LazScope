@@ -86,8 +86,6 @@ var
   bufsize: integer;
   singleShot: boolean = false;
 
-function CalcDataBufferSize(const SampleCount: integer): integer;
-
 implementation
 
 {$R *.lfm}
@@ -100,11 +98,6 @@ uses
 const
   LineColors: array[0..7] of TColor =
     (clLime, clBlue, clRed, clPurple, clYellow, clMaroon, clWhite, clAqua);
-
-function CalcDataBufferSize(const SampleCount: integer): integer;
-begin
-  result := 3*(SampleCount div 2) + 2*(SampleCount and 1) + 4 + 1;
-end;
 
 procedure TForm1.RunningCheckChange(Sender: TObject);
 begin
@@ -197,10 +190,8 @@ begin
 
       if not err then
       begin
-        numsamples := SerialThread.SerialReturnValue;
-        bufsize := CalcDataBufferSize(numsamples);
+        bufsize := SerialThread.SerialReturnValue;
         SetLength(buf, bufsize);
-        SetLength(data, numsamples);
 
         ADCScalerSelector.ItemIndex := 3;
         cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
@@ -338,15 +329,63 @@ end;
 procedure TForm1.Processdata;
 var
   i, j: integer;
-  checksum, l, h: byte;
+  checksum, l, h, d: byte;
   t: dword;
   delta: double;
+  Vref, currentChannelCount: integer;
+  tenBitData, triggered: boolean;
+  newLineSeries: TLineSeries;
 begin
   checksum := 0;
 
+  // Data settings byte
+  case (buf[0] and $03) of
+    1: Vref := 1100;
+    2: Vref := 2560;
+  otherwise
+    Vref := 0;  // Vcc or Aref
+  end;
+  triggered := (buf[0] and triggerMask) <> 0;
+  tenBitData := (buf[0] and tenBitFlagMask) <> 0;
+  checksum := checksum XOR buf[0];
+
+  // Channels
+  d := buf[1];
+  checksum := checksum XOR buf[1];
+
+  currentChannelCount := PopCnt(d);
+  if currentChannelCount > Chart1.SeriesCount then
+    while currentChannelCount > Chart1.SeriesCount do
+    begin
+      newLineSeries := TLineSeries.Create(self);
+      Chart1.AddSeries(newLineSeries);
+    end
+  else if currentChannelCount < Chart1.SeriesCount then
+    while currentChannelCount < Chart1.SeriesCount do
+      Chart1.DeleteSeries(Chart1.Series[Chart1.SeriesCount-1]);
+
+  j := 0;
+  for i := 0 to 7 do
+  begin
+    if ((d shr i) and 1) <> 0 then
+    begin
+      TLineSeries(Chart1.Series[j]).Title := 'A' + IntToStr(i);
+      TLineSeries(Chart1.Series[j]).SeriesColor := LineColors[j];
+      inc(j);
+    end;
+  end;
+
+  // Subtract sizeof information
+  numsamples := bufsize - 7;
+  // Adjust for 10 bit packing
+  if tenBitData then
+    numsamples := (numsamples div 3) * 2 + ((numsamples mod 3) shr 1);
+
+  SetLength(data, numsamples);
+
   for i := 0 to length(data)-1 do
   begin
-    j := 3*(i shr 1) + (i mod 2);
+    j := 3*(i shr 1) + (i mod 2) + 2; // 2 is data starting offset into buffer
 
     h := buf[j];
     l := buf[j+1];
@@ -368,7 +407,7 @@ begin
   end;
 
   // Time frame in microseconds
-  j := 3*(numsamples div 2) + (numsamples mod 2);
+  j := bufsize - 5;
   t := (buf[j + 0] shl 24);
   t := t + (buf[j + 1] shl 16);
   t := t + (buf[j + 2] shl 8);
@@ -390,9 +429,9 @@ begin
   // Check checksum:
   checksum := checksum XOR buf[j + 4];
 
-  if numPortsSelected = 0 then exit;
+  if currentChannelCount = 0 then exit;
 
-  for j := 0 to numPortsSelected-1 do
+  for j := 0 to currentChannelCount-1 do
   begin
     TLineSeries(Chart1.Series[j]).Clear;
     TLineSeries(Chart1.Series[j]).BeginUpdate;
@@ -405,14 +444,14 @@ begin
     TLineSeries(Chart1.Series[j]).AddXY(delta*i, data[i]);
     // Waiting for trigger condition gives two data points for the first channel
     // So add the first two data points to the first series
-    if (i > 0) or (TriggerOptionsRadioBox.ItemIndex = 0) or (numPortsSelected = 1) then
+    if (i > 0) or not triggered or (currentChannelCount = 1) then
       inc(j);
 
-    if j = numPortsSelected then
+    if j = currentChannelCount then
       j := 0;
   end;
 
-  for j := 0 to numPortsSelected-1 do
+  for j := 0 to currentChannelCount-1 do
     TLineSeries(Chart1.Series[j]).EndUpdate;
 
   if checksum = 0 then
