@@ -15,20 +15,18 @@ const
 
 type
   TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
-  TDataBuf = array[0..BUFSIZE-1] of byte;
+  TDataBuf10bit = array[0..BufferSize10bit-1] of byte;
 
   TWordAsBytes = packed record
     l, h: byte;
   end;
 
 var
-  databuf: TDataBuf; // x samples [word/sample], timedelta in _us [dword], checksum [uint8_t]
   time: uint32; // Duration of a data frame in 16 microsecond ticks
   ADMUXhiMask: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
   triggerlevel: uint16 = 512;  // Trigger threshold
-  rollovercount: uint16 = samples; // continue if trigger didn't fire after so many counts
   triggerInit: word;  // value used to ensure first trigger check is untrue, eliminates a boolean check
 
   ADMUXVector: array[0..MaxADCChannels-1] of byte;
@@ -50,7 +48,7 @@ end;
 // v1 is new value, v2 is old value
 function checkTriggerRising(const value1, value2: uint16): boolean;
 begin
-  Result := (triggerlevel <= value1 {>= triggerlevel}) and (triggerlevel > value2 {< triggerlevel});
+  Result := (triggerlevel <= value1) and (triggerlevel > value2);
 end;
 
 // v1 is new value, v2 is old value
