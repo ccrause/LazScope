@@ -47,11 +47,8 @@
             </Debugging>
           </Linking>
           <Other>
-            <Verbosity>
-              <ShowAll Value="True"/>
-            </Verbosity>
             <ConfigFile>
-              <ConfigFilePath Value="~/fpc/gitlab-cc/fpc.cfg"/>
+              <ConfigFilePath Value=""/>
             </ConfigFile>
             <CustomOptions Value="-Wpatmega328p
 -XPavr-
@@ -59,7 +56,8 @@
 -Si
 -dF_CPU:=16000000
 -dBAUD:=115200
--al"/>
+-al
+-Xm"/>
             <CompilerPath Value="/home/christo/fpc/installs/lib/fpc/3.3.1/ppcrossavr"/>
             <ExecuteBefore>
               <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
