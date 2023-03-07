@@ -37,6 +37,9 @@ var
   timerOverflow: byte;
   {$endif}
 
+  // Keep at end of global data, serves as a bit of protection agains stack/global data overlap
+  databuf: TDataBuf10bit;
+
 // Returns next selected ADC channel, wraps around
 procedure nextPortChannel(var nextID: byte); inline;
 begin
@@ -117,8 +120,11 @@ const
   timeout1 = 4*F_CPU div 13;
 var
   nextChannelIndex: byte;
+  i, j, timeoutcount: word;
+  // Keep these variables at end of stack
+  // to serve as a bit of protection against stack/global data smashing
   lowbyte, hibyte: byte;
-  v1, v2, i, j, timeoutcount: word;
+  v1, v2: word;
 begin
   // Aim for a timeout of ~ 4 seconds or at most 65535 counts
   timeoutcount := word(uint32(timeout1) shr 16) shr (ADCSRA and $07);
