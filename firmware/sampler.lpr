@@ -300,10 +300,18 @@ begin
         // Voltage reference: 0 = external (Vcc, Aref etc.), 1 = 1.1 V, 2 = 2.56 V
         Databuf[0] := 0;
         {$if defined(CPUAVR5)}
+        // The bitmasked comparison triggers an optimization bug,
+        // see https://gitlab.com/freepascal.org/fpc/source/-/merge_requests/386
+        // Workarond for FPC 3.2.2 and lower
+        {$if FPC_FULLVERSION <= 30202}
+        b := ADMUXhiMask and $C0;
+        if b = $C0 then
+        {$else}
         if (ADMUXhiMask and $C0) = $C0 then
+        {$endif}
           Databuf[0] := 1;
         {$elseif defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
-        if ADMUXhiMask and $C0 = $80 then
+        if (ADMUXhiMask and $C0) = $80 then
           Databuf[0] := 1;
         {$elseif defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
         case (ADMUXhiMask and $D0) of
