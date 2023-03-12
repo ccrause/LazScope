@@ -43,14 +43,14 @@
   {$endif}
 
   // Space left for data buffer
-  BufferSize8bit = FPC_SRAMSIZE - GlobalVariables - MaxStackSize;
+  BufferSize = FPC_SRAMSIZE - GlobalVariables - MaxStackSize;
 
-  // Note: 7 bytes at end reserved for information
-  NumSamples8bit = BufferSize8bit - 7;
+  // Note: 7 bytes reserved for information
+  NumSamples8bit = BufferSize - 7;
 
 // Number of 10 bit samples to fit into buffer
   // 3 bytes per 2x 10 bit samples, plus 1 sample if 2 bytes are left
   NumSamples10bit = (NumSamples8bit div 3) * 2 + ((NumSamples8bit mod 3) shr 1);
   // Actual 10 bit buffer size
-  BufferSize10bit = (NumSamples10bit div 2)*3 + (NumSamples10bit and 1)*2 + 7;
+  //BufferSize10bit = (NumSamples10bit div 2)*3 + (NumSamples10bit and 1)*2 + 7;
 

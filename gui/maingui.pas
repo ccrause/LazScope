@@ -15,6 +15,7 @@ type
   TForm1 = class(TForm)
     ADCPortsList: TCheckGroup;
     ADCScalerSelector: TComboBox;
+    ADCResolutionSelector: TComboBox;
     BaudEdit: TEdit;
     Chart1: TChart;
     ChartToolset1: TChartToolset;
@@ -28,6 +29,7 @@ type
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
+    Label7: TLabel;
     LabelX: TLabel;
     LabelXlbl: TLabel;
     LabelY: TLabel;
@@ -42,6 +44,7 @@ type
     TriggerOptionsRadioBox: TRadioGroup;
     procedure ADCPortsListClick(Sender: TObject);
     procedure ADCPortsListItemClick(Sender: TObject; Index: integer);
+    procedure ADCResolutionSelectorChange(Sender: TObject);
     procedure ChartToolset1DataPointCrosshairTool1AfterKeyUp(ATool: TChartTool;
       APoint: TPoint);
     procedure ChartToolset1DataPointCrosshairTool1AfterMouseMove(
@@ -118,6 +121,24 @@ begin
   CheckSelectedADCPorts;
 end;
 
+procedure TForm1.ADCResolutionSelectorChange(Sender: TObject);
+var
+  s: string;
+begin
+  s := ADCResolutionSelector.Items[ADCResolutionSelector.ItemIndex];
+  if s = '8 bit' then
+  begin
+    SerialThread.SetCommand(cmdSet8bit);
+    if TriggerLevelEdit.Value > 252 then
+    begin
+      TriggerLevelEdit.Value := 252;
+      TriggerOptionsRadioBoxClick(nil);
+    end;
+  end
+  else if s = '10 bit' then
+    SerialThread.SetCommand(cmdSet10bit);
+end;
+
 procedure TForm1.ChartToolset1DataPointCrosshairTool1AfterKeyUp(
   ATool: TChartTool; APoint: TPoint);
 begin
@@ -178,7 +199,7 @@ begin
       if not err then
       begin
         SerialThread.SerialReturnValue := 0;
-        SerialThread.SetCommand(cmdSampleCount);
+        SerialThread.SetCommand(cmdBufferSize);
         i := 0;
         repeat
           Sleep(10);
@@ -221,6 +242,34 @@ begin
         // Sync ADC prescaler with Arduino
         ADCPortsList.Checked[0] := true;
         CheckSelectedADCPorts;
+      end;
+
+      if not err then
+      begin
+        SerialThread.SerialReturnValue := 0;
+        SerialThread.SetCommand(cmdListResolutions);
+        i := 0;
+        repeat
+          Sleep(10);
+          Application.ProcessMessages;
+          inc(i);
+        until (SerialThread.SerialReturnValue > 0) or (i > 100);
+        err := (SerialThread.SerialReturnValue and 3) = 0;
+      end;
+
+      if not err then
+      begin
+        i := SerialThread.SerialReturnValue;
+
+        ADCResolutionSelector.Items.Clear;
+        if (i and 1) = 1 then
+          ADCResolutionSelector.Items.Add('8 bit');
+        if (i and 2) = 2 then
+          ADCResolutionSelector.Items.Add('10 bit');
+
+        // Default to lower resolution
+        ADCResolutionSelector.ItemIndex := 0;
+        ADCResolutionSelectorChange(nil);
 
         // Sync ADC trigger with GUI
         TriggerOptionsRadioBoxClick(nil);
@@ -328,7 +377,7 @@ end;
 
 procedure TForm1.Processdata;
 var
-  i, j: integer;
+  i, j, yscale: integer;
   checksum, l, h, d: byte;
   t: dword;
   delta: double;
@@ -377,34 +426,55 @@ begin
 
   // Subtract sizeof information
   numsamples := bufsize - 7;
-  // Adjust for 10 bit packing
+
   if tenBitData then
+  begin
+    // Adjust for 10 bit packing
     numsamples := (numsamples div 3) * 2 + ((numsamples mod 3) shr 1);
+    yscale := 1023;
+  end
+  else
+  begin
+    yscale := 255;
+  end;
+
+  if Vref = 0 then
+    Chart1.Extent.YMax := yscale + 1
+  else
+    Chart1.Extent.YMax := Vref;
 
   SetLength(data, numsamples);
 
-  for i := 0 to length(data)-1 do
-  begin
-    j := 3*(i shr 1) + (i mod 2) + 2; // 2 is data starting offset into buffer
+  if tenBitData then
+    for i := 0 to length(data)-1 do
+    begin
+      j := 3*(i shr 1) + (i mod 2) + 2; // 2 is data starting offset into buffer
 
-    h := buf[j];
-    l := buf[j+1];
-    if (i mod 2) = 0 then  // left adjusted
-    begin
-      t := h shl 2 + l shr 6;
-      data[i] := t;
-      checksum := checksum XOR buf[j];
-      checksum := checksum XOR buf[j + 1];
+      h := buf[j];
+      l := buf[j+1];
+      if (i mod 2) = 0 then  // left adjusted
+      begin
+        t := h shl 2 + l shr 6;
+        data[i] := t;
+        checksum := checksum XOR buf[j];
+        checksum := checksum XOR buf[j + 1];
+      end
+      else  // right adjusted
+      begin
+        t := (h and %00000011);
+        t := t shl 8;
+        t := t + l;
+        data[i] := t;
+        checksum := checksum XOR buf[j+1];
+      end;
     end
-    else  // right adjusted
+  else
+    for i := 0 to length(data)-1 do
     begin
-      t := (h and %00000011);
-      t := t shl 8;
-      t := t + l;
-      data[i] := t;
-      checksum := checksum XOR buf[j+1];
+      j := i + dataOffset;
+      data[i] := buf[j];
+      checksum := checksum XOR buf[j];
     end;
-  end;
 
   // Time frame in microseconds
   j := bufsize - 5;
@@ -441,7 +511,11 @@ begin
   j := 0;
   for i := 0 to numsamples-1 do
   begin
-    TLineSeries(Chart1.Series[j]).AddXY(delta*i, data[i]);
+    if Vref = 0 then
+      TLineSeries(Chart1.Series[j]).AddXY(delta*i, data[i])
+    else
+      TLineSeries(Chart1.Series[j]).AddXY(delta*i, data[i]*Vref/yscale);
+
     // Waiting for trigger condition gives two data points for the first channel
     // So add the first two data points to the first series
     if (i > 0) or not triggered or (currentChannelCount = 1) then

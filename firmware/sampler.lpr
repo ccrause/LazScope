@@ -11,9 +11,13 @@ const
   ADCVoltage1_1  = {$ifdef CPUAVR5}12{$else}8{$endif} shl 4;
   ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif} shl 4;
 
+  // ADLAR bit in ADCMUX hi nibble
+  ADCleftAdjust = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}2 shl 4
+                  {$else}0{$endif};
+
 type
   TTriggerFunc = function(const value1, value2: uint16): boolean;  // pointer to trigger check function
-  TDataBuf10bit = array[0..BufferSize10bit-1] of byte;
+  TDataBuf = array[0..BufferSize-1] of byte;
 
   TWordAsBytes = packed record
     l, h: byte;
@@ -24,8 +28,8 @@ var
   ADMUXhiMask: uint8;  // hi nibble of the ADMUX register
 
   triggerCheck: TTriggerFunc;  // pointer to trigger function
+  trigger: byte = cmdTriggerOff;
   triggerlevel: uint16 = 512;  // Trigger threshold
-  triggerInit: word;  // value used to ensure first trigger check is untrue, eliminates a boolean check
 
   ADMUXVector: array[0..MaxADCChannels-1] of byte;
   numChannels: uint8;
@@ -36,7 +40,7 @@ var
   {$endif}
 
   // Keep at end of global data, serves as a bit of protection agains stack/global data overlap
-  databuf: TDataBuf10bit;
+  databuf: TDataBuf;
 
 // Returns next selected ADC channel, wraps around
 procedure nextPortChannel(var nextID: byte); inline;
@@ -131,7 +135,11 @@ begin
   else
     timeoutcount := uint32(timeout1) shr (ADCSRA and $07);
 
-  v1 := triggerInit;
+  if trigger = cmdTriggerFalling then
+    v1 := 0
+  else
+    v1 := 1023;
+
   i := 0;
   nextChannelIndex := 0;
 
@@ -145,12 +153,15 @@ begin
     TWordAsBytes(v1).h := hibyte;
     TWordAsBytes(v1).l := lowbyte;
 
-    if (triggerCheck = nil) then
+    if (trigger = cmdTriggerOff) then
       Break
     else if triggerCheck(v1, v2) or (i >= timeoutcount) then
+    //else if ((trigger = cmdTriggerRising) and (triggerlevel <= v1) and (triggerlevel > v2)) or
+    //  ((v1 <= triggerlevel) and (v2 > triggerlevel)) or
+    //  (i >= timeoutcount) then
     begin
-      databuf[2] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
-      databuf[3] := (TWordAsBytes(v2).l and 3) shl 6;
+      databuf[dataOffset] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
+      databuf[dataOffset+1] := (TWordAsBytes(v2).l and 3) shl 6;
       i := 1;
       Break;
     end;
@@ -167,7 +178,7 @@ begin
     ADCSRA := ADCSRA or (1 shl ADSC); // start the conversion
 
     nextPortChannel(nextChannelIndex);
-    j := 2 + i + (i div 2);
+    j := i + (i div 2) + dataOffset;
     if (i and 1) = 0 then
     begin
       databuf[j] := (hibyte shl 6) or (lowbyte shr 2);
@@ -186,7 +197,7 @@ begin
   end;
 
   time := stopGetTimeMicros();
-  j := i + (i div 2) + 2;
+  j := i + (i div 2) + dataOffset;
   if (i and 1) = 0 then
   begin
     databuf[j] := (hibyte shl 6) or (lowbyte shr 2);
@@ -199,6 +210,69 @@ begin
   end;
 end;
 
+// Read ADC and pack data buffer
+procedure gatherData8;
+const
+  timeout1 = 4*F_CPU div 13;
+var
+  nextChannelIndex: byte;
+  i, timeoutcount: word;
+  // Keep these variables at end of stack
+  // to serve as a bit of protection against stack/global data smashing
+  v1, v2: byte;
+begin
+  // Aim for a timeout of ~ 4 seconds or at most 65535 counts
+  timeoutcount := word(uint32(timeout1) shr 16) shr (ADCSRA and $07);
+  if timeoutcount > 0 then
+    timeoutcount := $FFFE
+  else
+    timeoutcount := uint32(timeout1) shr (ADCSRA and $07);
+
+  if trigger = cmdTriggerFalling then
+    v1 := 0
+  else
+    v1 := 255;
+
+  i := dataOffset;
+  nextChannelIndex := 0;
+
+  repeat
+    ADMUX := ADMUXVector[nextChannelIndex];
+    ADCSRA := ADCSRA or (1 shl ADSC);
+    v2 := v1;
+    while ((ADCSRA and (1 shl ADSC)) > 0) do;
+    v1 := ADCH;
+
+    if (triggerCheck = nil) then
+      Break
+    else if triggerCheck(v1, v2) or (i >= timeoutcount) then
+    begin
+      databuf[dataOffset] := v2;
+      i := dataOffset + 1;
+      Break;
+    end;
+
+    inc(i);
+  until false;
+
+  // Start with normal reading
+  nextPortChannel(nextChannelIndex);
+  startTimer();
+  while i < NumSamples8bit+1 do
+  begin
+    ADMUX := ADMUXVector[nextChannelIndex];
+    ADCSRA := ADCSRA or (1 shl ADSC); // start the conversion
+    nextPortChannel(nextChannelIndex);
+    databuf[i] := v1;
+    inc(i);
+    while ((ADCSRA and (1 shl ADSC)) > 0) do; // ADSC is cleared when the conversion finishes
+    v1 := ADCH;
+  end;
+
+  time := stopGetTimeMicros();
+  databuf[i] := v1;
+end;
+
 // Call this to update MUX with new voltage reference
 // or if ADC channel selection changed
 procedure updateADMUXVector();
@@ -206,14 +280,14 @@ var
   i: byte;
 begin
   for i := 0 to numChannels-1 do
-    ADMUXVector[i] := ADMUXhiMask or (ADMUXVector[i] and $0F);// + channels[i];
+    ADMUXVector[i] := ADMUXhiMask or (ADMUXVector[i] and $0F);
 end;
 
-procedure uartWriteBuffer(constref data: TDataBuf10bit);
+procedure uartWriteBuffer(constref data: TDataBuf);
 var
   i: uint16;
 begin
-  for i := 0 to BufferSize10bit-1 do
+  for i := 0 to BufferSize-1 do
     uartTransmit(data[i]);
 end;
 
@@ -234,7 +308,7 @@ begin
   // Disable digital input on all input analog pins to save power
   DIDR0 := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
            63{$else}(1 shl ADC2D) or (1 shl ADC3D){$endif};
-  triggerCheck := nil;
+  //triggerCheck := nil;
 
   // Setup timer2 PWM on PD3 / D3 @ 0.5 kHz
   {$if defined(CPUAVR5) }
@@ -269,6 +343,22 @@ begin
     // ADC pins (PC0..PC5 for atmega328p, PB1..PB3 for attiny}
     cmdADCPins: cmd := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
                        %00111111{$else}%00001100{$endif};
+    // Read the selected ports for ADC
+    cmdSelectPorts:
+      begin
+        uartTransmit(cmd);
+        cmd := uartReceive();
+        numChannels := 0;
+        for b := 0 to 7 do
+        begin
+          if ((cmd and (1 shl b)) > 0) and (numChannels < MaxADCChannels-1) then
+          begin
+            ADMUXVector[numChannels] := ADMUXhiMask or b;
+            inc(numChannels);
+          end;
+        end;
+      end;
+
     // ADC prescaler selection
     cmdADCDiv2  : ADCSRA := $81;
     cmdADCDiv4  : ADCSRA := $82;
@@ -293,6 +383,13 @@ begin
       begin
         ADMUXhiMask := ADCVoltageARev;// Aref pin
         updateADMUXVector();
+      end;
+
+    // Return number of samples in buffer
+    cmdBufferSize:
+      begin
+        uartTransmit(byte(BufferSize and $FF));  // LSB
+        cmd := (BufferSize shr 8);
       end;
 
     cmdSendData:
@@ -320,17 +417,8 @@ begin
         end;
         {$endif}
 
-        // 10 bit samples?
-        // If ADLAR bit is set, then in 8 bit data mode
-        {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
-        if (ADCSRB and (1 shl ADLAR)) = 0 then
-        {$else}
-        if (ADMUX and (1 shl ADLAR)) = 0 then
-        {$endif}
-          Databuf[0] := Databuf[0] or tenBitFlagMask;
-
         // Trigger?
-        if triggerCheck <> nil then
+        if trigger <> cmdTriggerOff then
           Databuf[0] := Databuf[0] or triggerMask;
 
         // Active channels
@@ -341,67 +429,85 @@ begin
           Databuf[1] := Databuf[1] or byte(1 shl byte(i));
         end;
 
-        gatherData();
+        // If ADLAR bit is cleared, then in 10 bit data mode
+        {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+        if ADCSRB = 0 then
+        {$else}
+        if (ADMUXhiMask and ADCleftAdjust) = 0 then
+        {$endif}
+        begin
+          Databuf[0] := Databuf[0] or tenBitFlagMask;
+          gatherData();
+        end
+        else
+          gatherData8();
 
-        databuf[BufferSize10bit - 5] := time shr 24;
-        databuf[BufferSize10bit - 4] := (time and $00FF0000) shr 16;
-        databuf[BufferSize10bit - 3] := (time and $0000FF00) shr 8;
-        databuf[BufferSize10bit - 2] := time and $000000FF;
+        databuf[BufferSize - 5] := time shr 24;
+        databuf[BufferSize - 4] := (time and $00FF0000) shr 16;
+        databuf[BufferSize - 3] := (time and $0000FF00) shr 8;
+        databuf[BufferSize - 2] := time and $000000FF;
 
         // XOR data checksum
         b := 0;
-        for i := 0 to BufferSize10bit-2 do
+        for i := 0 to BufferSize-2 do
           b := b xor databuf[i];
-        databuf[BufferSize10bit-1] := b;
+        databuf[BufferSize-1] := b;
 
         uartWriteBuffer(databuf);
         exit; // Do not echo cmd
       end;
 
-    // Return number of samples in buffer
-    cmdSampleCount:
-      begin
-        uartTransmit(byte(BufferSize10bit and $FF));  // LSB
-        cmd := (BufferSize10bit shr 8);
-      end;
-
     // Set trigger options
-    cmdTriggerOff: triggerCheck := nil;
+    cmdTriggerOff: trigger := cmdTriggerOff;
 
     cmdTriggerRising:
       begin
         uartTransmit(cmd);
+        trigger := cmdTriggerRising;
         triggerCheck := @checkTriggerRising;
         cmd := uartReceive();
         triggerlevel := word(cmd) shl 2;
-        triggerInit := 1023;
       end;
 
     cmdTriggerFalling:
       begin
         uartTransmit(cmd);
+        trigger := cmdTriggerFalling;
         triggerCheck := @checkTriggerFalling;
         cmd := uartReceive();
         triggerlevel := word(cmd) shl 2;
-        triggerInit := 0;
       end;
 
-    // Read the selected ports for ADC
-    cmdSelectPorts:
+    cmdListResolutions:
       begin
-        uartTransmit(cmd);
-        cmd := uartReceive();
-        numChannels := 0;
-        for b := 0 to 7 do
-        begin
-          if ((cmd and (1 shl b)) > 0) and (numChannels < MaxADCChannels-1) then
-          begin
-            ADMUXVector[numChannels] := ADMUXhiMask or b;
-            inc(numChannels);
-          end;
-        end;
+        {$if FPC_FLASHSIZE < 4096}
+        cmd := 1;
+        {$else}
+        cmd := 3;
+        {$endif}
+      end;
+
+    cmdSet8bit:
+      begin
+        {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+        ADCSRB := 1 shl ADLAR;
+        {$else}
+        ADMUXhiMask := ADMUXhiMask or ADCleftAdjust;
+        updateADMUXVector();
+        {$endif}
+      end;
+
+    cmdSet10bit:
+      begin
+        {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+        ADCSRB := 0;
+        {$else}
+        ADMUXhiMask := ADMUXhiMask and ($FF - ADCleftAdjust);
+        updateADMUXVector();
+        {$endif}
       end;
   end;
+
   // Echo command back to show it is completed
   uartTransmit(cmd);
 end;
