@@ -243,7 +243,7 @@ begin
     while ((ADCSRA and (1 shl ADSC)) > 0) do;
     v1 := ADCH;
 
-    if (triggerCheck = nil) then
+    if trigger = cmdTriggerOff then
       Break
     else if triggerCheck(v1, v2) or (i >= timeoutcount) then
     begin
@@ -458,7 +458,11 @@ begin
       end;
 
     // Set trigger options
-    cmdTriggerOff: trigger := cmdTriggerOff;
+    cmdTriggerOff:
+      begin
+        trigger := cmdTriggerOff;
+        triggerCheck := nil;
+      end;
 
     cmdTriggerRising:
       begin
