@@ -117,6 +117,7 @@ begin
 end;
 
 // Read ADC and pack data buffer
+{$if FPC_FLASHSIZE > 2048}
 procedure gatherData;
 const
   timeout1 = 4*F_CPU div 13;
@@ -209,6 +210,7 @@ begin
     databuf[j+1] := lowbyte;
   end;
 end;
+{$endif}
 
 // Read ADC and pack data buffer
 procedure gatherData8;
@@ -429,6 +431,7 @@ begin
           Databuf[1] := Databuf[1] or byte(1 shl byte(i));
         end;
 
+        {$if FPC_FLASHSIZE > 2048}
         // If ADLAR bit is cleared, then in 10 bit data mode
         {$if defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
         if ADCSRB = 0 then
@@ -440,6 +443,7 @@ begin
           gatherData();
         end
         else
+        {$endif}
           gatherData8();
 
         databuf[BufferSize - 5] := time shr 24;
