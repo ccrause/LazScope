@@ -353,7 +353,7 @@ begin
         numChannels := 0;
         for b := 0 to 7 do
         begin
-          if ((cmd and (1 shl b)) > 0) and (numChannels < MaxADCChannels-1) then
+          if ((cmd and (1 shl b)) > 0) and (numChannels < MaxADCChannels) then
           begin
             ADMUXVector[numChannels] := ADMUXhiMask or b;
             inc(numChannels);
