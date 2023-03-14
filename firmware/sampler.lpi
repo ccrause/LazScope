@@ -14,7 +14,7 @@
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
     </General>
-    <BuildModes Count="4">
+    <BuildModes Count="5">
       <Item1 Name="tiny45" Default="True"/>
       <Item2 Name="mega328p">
         <CompilerOptions>
@@ -48,6 +48,7 @@
           </Linking>
           <Other>
             <ConfigFile>
+              <CustomConfigFile Value="True"/>
               <ConfigFilePath Value=""/>
             </ConfigFile>
             <CustomOptions Value="-Wpatmega328p
@@ -55,9 +56,7 @@
 -Sm
 -Si
 -dF_CPU:=16000000
--dBAUD:=115200
--al
--Xm"/>
+-dBAUD:=115200"/>
             <CompilerPath Value="/home/christo/fpc/installs/lib/fpc/3.3.1/ppcrossavr"/>
             <ExecuteBefore>
               <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
@@ -106,7 +105,7 @@
             </Verbosity>
             <WriteFPCLogo Value="False"/>
             <ConfigFile>
-              <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
+              <ConfigFilePath Value=""/>
             </ConfigFile>
             <CustomOptions Value="-Wpattiny24
 -XPavr-
@@ -161,9 +160,9 @@
               <ShowAll Value="True"/>
             </Verbosity>
             <ConfigFile>
-              <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
+              <ConfigFilePath Value=""/>
             </ConfigFile>
-            <CustomOptions Value="-Wpattiny85
+            <CustomOptions Value="-Wpattiny45
 -XPavr-
 -Sm
 -Si
@@ -181,6 +180,62 @@
           </Other>
         </CompilerOptions>
       </Item4>
+      <Item5 Name="tiny24-3.2.2">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="sampler" ApplyConventions="False"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../shared"/>
+            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <CStyleMacros Value="True"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <TargetCPU Value="avr"/>
+            <TargetOS Value="embedded"/>
+            <Optimizations>
+              <OptimizationLevel Value="4"/>
+            </Optimizations>
+            <SmallerCode Value="True"/>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <DebugInfoType Value="dsDwarf3"/>
+              <UseLineInfoUnit Value="False"/>
+            </Debugging>
+          </Linking>
+          <Other>
+            <Verbosity>
+              <ShowAll Value="True"/>
+            </Verbosity>
+            <WriteFPCLogo Value="False"/>
+            <ConfigFile>
+              <ConfigFilePath Value=""/>
+            </ConfigFile>
+            <CustomOptions Value="-Wpattiny24
+-XPavr-
+-Sm
+-Si
+-dF_CPU:=8000000
+-dBAUD:=115200"/>
+            <CompilerPath Value="/home/christo/fpc/installs/lib/fpc/3.2.2/ppcrossavr"/>
+            <ExecuteBefore>
+              <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
+              <CompileReasons Compile="False" Build="False" Run="False"/>
+            </ExecuteBefore>
+            <ExecuteAfter>
+              <Command Value="/home/christo/fpc/fpc-avr/src/scripts/listasm.sh $(targetfile).elf"/>
+              <CompileReasons Run="False"/>
+            </ExecuteAfter>
+          </Other>
+        </CompilerOptions>
+      </Item5>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -244,16 +299,14 @@
         <ShowAll Value="True"/>
       </Verbosity>
       <ConfigFile>
-        <ConfigFilePath Value="~/fpc/3.3.1/fpc.cfg"/>
+        <ConfigFilePath Value=""/>
       </ConfigFile>
-      <CustomOptions Value="-Wpattiny85
+      <CustomOptions Value="-Wpattiny45
 -XPavr-
 -Sm
 -Si
--Xm
 -dF_CPU:=8000000
--dBAUD:=115200
--a"/>
+-dBAUD:=115200"/>
       <CompilerPath Value="/home/christo/fpc/installs/lib/fpc/3.3.1/ppcrossavr"/>
       <ExecuteBefore>
         <Command Value="/home/christo/fpc/fpc-avr/src/scripts/run-simavr.sh $(targetfile)"/>
