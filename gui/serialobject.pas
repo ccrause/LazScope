@@ -58,6 +58,7 @@ function GetSerialPortNames: string;
 const
   TCGETS2 = $802C542A; //longint(2150388778);
   TCSETS2 = $402C542B; //1076646955;
+  ENOTTY  = 25;
 
 implementation
 
@@ -339,7 +340,8 @@ end;
                 if f <> 0 then
                 begin
                   val := FpIOCtl(f, TIOCGSERIAL, @ser);
-                  if (val <> -1) then
+                  // Workaround for cp210x driver returning ENOTTY
+                  if (val <> -1) or (errno = ENOTTY) then
                     Result := Result + '/dev/' + sr.Name + ',';
                   SerClose(f);
                 end;
