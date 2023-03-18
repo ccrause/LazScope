@@ -1,36 +1,55 @@
 # LazScope
 FPC/Lazarus serial oscilloscope
-A simple oscilloscope project which reads ADC data buffers from an Arduino Uno (can be adapted for other AVR controllers) via a serial connection.  This data gets displayed on a PC screen via a FPC/Lazarus GUI.
+This oscilloscope project consists of two parts: a microcontroller that read analog signoals via its ADC peripheral, and an application that runs on a computer that requests data over a serial connection with the microcontroller.
+
+## Functionality
+### Connection
+A serial connection needs to be established between the application and the microcontroller. The serial port cab be selected by clicking on the dropdown list nad selecting the appropriate serial device. If the actual serial device is not listed, the full name can be typed into the dropdown text box. The baud rate is determined by the settings used in the microcontroller firmware - typically 115200. The baud rate can be edited to suit the microcontroller firmware.
+
+### Running and SingleShot
+Data acquisition is started by clicking on _Running_.  After a data frame has been received, a new data acquisition request is sent to the micrcontroller.  This continues until _Running_ is unselected.  If the _SingleShot_ option is selected, a single data frame is requested and displayed after enabling the _Running_ mode. Once the data frame is received _Running_ is automatically disabled, so that the received data can be inspected.
+
+### Trigger mode
+There are two optional trigger modes: _Rising_ and _Falling_. If for example the _Rising_ trigger is selected, then data samples are evaluated until a data sample below the trigger level is followed by a data sample above the trigger level.  Data capture is delayed until a trigger condition is met, a certain number of data samples have been evaluated, or until approximately 4 seconds have expired. Note that the trigger is only applied on the first selected channel. Valid trigger values are between 0 and the maximum range for the current ADC resolution. Internally the trigger value is rounded down to the nearest multiple of 4.
+
+### Reticule
+A reticule ("crosshair") tool is available which will snap to the nearest data point and display its coordinates.  Activate this by pressing the Alt button while moving the mouse pointer close to the signal trace. Note that the mouse pointer needs to be within a certain distance of a data point before the reticule will snap to it.
+
+### ADC prescaler
+This allows changing the data sampling frequency. Increasing the prescaler value results in lower data sampling frequency. Note that the atmega328p datasheet recommends a limit of 200 kHz sampling frequency by the ADC (about 65 microseconds acquisition time) to maintain maximum accuracy. Selecting small prescaler values may therefore result in inaccurate results.
+
+### Reference Voltage
+Different voltage references can be selected for the ADC. The options include _Vcc_, _1.1V_ and _Aref_.
+
+### ADC channels
+One or more of the available ADC channels can be selected for sampling. If more than one channel is selected, the channels will be sampled sequentially. Note that on low pin count microcontrollers (such as the attinyx5 series) some of the ADC capable pins are used for other functions such as serial pins or frequency output and will not be listed.
+
+### Data Resolution
+The ADC of the classic AVR microcontrollers typically have a resolution of 10 bits. These 10 bit values are stored and transmitted by packing two values into 3 bytes. To increase the number of samples that can be stored in one data frame, the data can be stored as 8 bit values. On the flash constrained microcontrolles (attiny24 and attiny25) only the 8 bit data option is available.
 
 ## Firmware
-The ADC prescaler gets configured via the GUI to a value in the range 2 ... 128.  This prescaler divides the controller clock which drives the ADC. For example the Arduino Uno runs at 16 MHz, resulting in a sample acquisition time of around 1.6 to 100 microseconds. Note that the atmega328p datasheet recommends a limit of 200 kHz clock to the ADC (about 65 microseconds acquisition time) to achieve maximum accuracy.  A prescaler of 64 is slightly beyond the specification, but still gives excellent visual preformance, even a prescaler of 32 looks visually OK.
+### Firmware configuration
+The baud rate defaults to 115200, but can be changed by defining BAUD, e.g. via command line: _-dBAUD=38400_.
 
-The firmware implements elementary trigger functionality.  Either a rising or falling slope with a threshold value can be selected.  The trigger logic takes a significant amount of time relative to the sample time, hence the decision to only trigger at the start.  This means that the interval between the 1st and 2nd data point may be slightly longer than subsequent intervals due to this.
-
-The ADC produces 10 bit results.  To preserve this precision and to reduce data storage space a sample point is stored in 12 bits.  This results in 3 bytes storage required per 2 samples.  The data is stored as follows:
-The first sample is left aligned so that the right-most 6 bits of the 2nd byte is unused.  The 2nd sample is the stored right aligned, with the high 2 bits stored in the 2nd byte and the low 8 bits stored in the 3rd byte. This leaves 4 bits unused which is a compromise between data storage efficiency and computational effort to pack the samples.
-
-Multiple ADC channels can be selected.  The firmware will then cycle the multiplexer through the channels in fixed sequence.
-
-The baud rate defaults to 115200, but can be changed by defining BAUD, e.g. via command line: _-dBAUD=38400_
+The firmware code needs to know the system clock frequency for certain timing calculations. The system clock frequency should be specified via the F_CPU define,e.g. via command line: _-dF_CPU:=16000000_.
 
 ### Supported controllers
-The code is factored such that similar controllers such as attiny44/84 or attiny25/85 should also work (but is untested).
-The firmware was tested on atmega328p, attiny45 and attiny24. Note that on low memory devices (attiny2x) only a few ADC samples can be collected per frame.
+The code is factored to be compatible with the following microcontroller families:
+* atmegaxx8 (atmega48, atmega88, atmega168, atmega328p)
+* attinyx4 (attiny24, attiny44, attiny84)
+* attinyx5 (attiny25, attiny45, attiny85)
+
+The firmware was tested on atmega328p, attiny45 and attiny24 microcontrollers.
 
 ### Square wave generator
-A square wave signal of 500 Hz is generated by the firmware. Very handy if one has a need to measure a signal in a hurry.
+A square wave signal of 500 Hz is generated by the firmware. The pin number for this output is shown in the table below.
 
-Controller | Square wave pin
----------- | ---------------
-atmega328p | PD3
-attinyx4 | PA7
-attinyx5 | PB0
-
-## Software
-The GUI consist of a display thread (main thread) and a serial thread to handle asynchronous communication with the firmware.  The general communication protocol is based on a request/response model, with the main thread sending requests to the serial thread, which dispatches a single message and wait for a response.  If the request doesn't return data, the command itself is echoed back.  When a user selects an option, the main thread will post a message to a command queue in the serial thread.  If the serial thread receives a data packet it is stored in raw format in a temporary buffer in the serial thread.  A message is posted to the main form to flag data availability.  The main thread will then unpack the data, extract the time for the data packet and perform a checksum test to detect data consistency errors.
-
-A reticule ("crosshair") tool is available which will snap to the nearest data point and display its coordinates.  Activate this by pressing the Alt button while moving the mouse cursor.
+### Serial and square wave pins
+Controller | TX | RX | Square wave pin
+---------- | --- | --- | ---------
+atmegaxx8 | PC0 | PC1 | PD3
+attinyx4 | PB2 | PB1 | PA7
+attinyx5 | PB2 | PB1 | PB0
 
 ## Examples
 Some signals were generated on a signal generator similar to this one (https://scienceprog.com/avr-dds-signal-generator-v20/)
@@ -42,4 +61,5 @@ A decent quality trace of the two signals.
 ### 50 Hz sine wave + 500 Hz square wave sampled at x8 prescaler
 A poor quality trace caused by to high a sampling frequency. At too high sampling frequencies the ADC charge capacitor cannot be fully charged/discharged between sample cycles, leading to smearing of samples.  In this case the alternating sampling caused channel A0 to affect A1's reading and visa versa.
 ![](images/50Hz_sine_500Hz_squarex8.png)
+
 
