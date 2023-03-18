@@ -143,10 +143,12 @@ begin
 
   i := 0;
   nextChannelIndex := 0;
+  ADMUX := ADMUXVector[0];
+  startTimer();
 
   repeat
-    ADMUX := ADMUXVector[nextChannelIndex];
     ADCSRA := ADCSRA or (1 shl ADSC);
+    TCNT1 := 0;
     v2 := v1;
     while ((ADCSRA and (1 shl ADSC)) > 0) do;
     lowbyte := ADCL;
@@ -155,11 +157,11 @@ begin
     TWordAsBytes(v1).l := lowbyte;
 
     if (trigger = cmdTriggerOff) then
-      Break
+    begin
+      TCNT1 := 0;
+      Break;
+    end
     else if triggerCheck(v1, v2) or (i >= timeoutcount) then
-    //else if ((trigger = cmdTriggerRising) and (triggerlevel <= v1) and (triggerlevel > v2)) or
-    //  ((v1 <= triggerlevel) and (v2 > triggerlevel)) or
-    //  (i >= timeoutcount) then
     begin
       databuf[dataOffset] := (TWordAsBytes(v2).h shl 6) or (TWordAsBytes(v2).l shr 2);
       databuf[dataOffset+1] := (TWordAsBytes(v2).l and 3) shl 6;
@@ -172,7 +174,6 @@ begin
 
   // Start with normal reading
   nextPortChannel(nextChannelIndex);
-  startTimer();
   while i < NumSamples10bit-1 do
   begin
     ADMUX := ADMUXVector[nextChannelIndex];
@@ -237,16 +238,21 @@ begin
 
   i := dataOffset;
   nextChannelIndex := 0;
+  ADMUX := ADMUXVector[0];
+  startTimer();
 
   repeat
-    ADMUX := ADMUXVector[nextChannelIndex];
     ADCSRA := ADCSRA or (1 shl ADSC);
+    TCNT1 := 0;
     v2 := v1;
     while ((ADCSRA and (1 shl ADSC)) > 0) do;
     v1 := ADCH;
 
     if trigger = cmdTriggerOff then
-      Break
+    begin
+      TCNT1 := 0;
+      Break;
+    end
     else if triggerCheck(v1, v2) or (i >= timeoutcount) then
     begin
       databuf[dataOffset] := v2;
@@ -259,7 +265,6 @@ begin
 
   // Start with normal reading
   nextPortChannel(nextChannelIndex);
-  startTimer();
   while i < NumSamples8bit+1 do
   begin
     ADMUX := ADMUXVector[nextChannelIndex];
