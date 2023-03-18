@@ -131,12 +131,16 @@ begin
     SerialThread.SetCommand(cmdSet8bit);
     if TriggerLevelEdit.Value > 252 then
     begin
+      TriggerLevelEdit.MaxValue := 252;
       TriggerLevelEdit.Value := 252;
       TriggerOptionsRadioBoxClick(nil);
     end;
   end
   else if s = '10 bit' then
+  begin
+    TriggerLevelEdit.MaxValue := 1020;
     SerialThread.SetCommand(cmdSet10bit);
+  end;
 end;
 
 procedure TForm1.ChartToolset1DataPointCrosshairTool1AfterKeyUp(
