@@ -642,7 +642,7 @@ begin
       Sleep(100);
       dec(timeout);
     end;
-    Result := timeout = 0;
+    Result := SerialThread.Done;
     if not Result then
       FreeAndNil(SerialThread);
   end
