@@ -97,7 +97,7 @@ begin
     else
       FlagDataAvailable;
   end
-  else if (cmd = cmdBufferSize) then // also resize internal data buffer
+  else if (cmd = cmdGetBufferSize) then // also resize internal data buffer
   begin
     FSerial.ReadByteTimeout(v1, 500);
     FSerial.ReadByteTimeout(v2, 500);
@@ -105,7 +105,7 @@ begin
     SerialReturnValue := v1 + (v2 shl 8);
     SetLength(FData, SerialReturnValue);
   end
-  else if cmd in [cmdADCPins, cmdListResolutions] then
+  else if cmd in [cmdListADCchannels, cmdGetADCVoltage_2_56, cmdListResolutions] then
   begin
     FSerial.ReadByteTimeout(v1, 500);
     SerialReturnValue := v1;

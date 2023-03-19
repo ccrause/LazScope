@@ -14,41 +14,9 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <BuildModes Count="6" Active="Release-Linux64">
-      <Item1 Name="Release-Linux64" Default="True"/>
-      <Item2 Name="Default1">
-        <CompilerOptions>
-          <Version Value="11"/>
-          <Target>
-            <Filename Value="LazScope"/>
-          </Target>
-          <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../shared"/>
-            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
-          </SearchPaths>
-          <CodeGeneration>
-            <Checks>
-              <IOChecks Value="True"/>
-              <RangeChecks Value="True"/>
-              <OverflowChecks Value="True"/>
-              <StackChecks Value="True"/>
-            </Checks>
-          </CodeGeneration>
-          <Linking>
-            <Debugging>
-              <UseHeaptrc Value="True"/>
-              <StripSymbols Value="True"/>
-            </Debugging>
-            <Options>
-              <Win32>
-                <GraphicApplication Value="True"/>
-              </Win32>
-            </Options>
-          </Linking>
-        </CompilerOptions>
-      </Item2>
-      <Item3 Name="3.3.1">
+    <BuildModes Count="6" Active="Default1">
+      <Item1 Name="Default1" Default="True"/>
+      <Item2 Name="3.3.1">
         <CompilerOptions>
           <Version Value="11"/>
           <Target>
@@ -92,6 +60,44 @@
             <CompilerPath Value="/home/christo/fpc/3.3.1/compiler/ppcx64"/>
           </Other>
         </CompilerOptions>
+      </Item2>
+      <Item3 Name="Release-Linux64">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="LazScope-$(TargetCPU)-$(TargetOS)"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../shared"/>
+            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+            <TargetCPU Value="x86_64"/>
+            <TargetOS Value="linux"/>
+            <Optimizations>
+              <OptimizationLevel Value="3"/>
+            </Optimizations>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <GenerateDebugInfo Value="False"/>
+              <DebugInfoType Value="dsDwarf3"/>
+            </Debugging>
+            <LinkSmart Value="True"/>
+            <Options>
+              <Win32>
+                <GraphicApplication Value="True"/>
+              </Win32>
+            </Options>
+          </Linking>
+          <Other>
+            <ConfigFile>
+              <ConfigFilePath Value=""/>
+            </ConfigFile>
+          </Other>
+        </CompilerOptions>
       </Item3>
       <Item4 Name="Release-Linux32">
         <CompilerOptions>
@@ -105,7 +111,6 @@
             <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <CodeGeneration>
-            <SmartLinkUnit Value="True"/>
             <TargetCPU Value="i386"/>
             <TargetOS Value="linux"/>
             <Optimizations>
@@ -115,8 +120,8 @@
           <Linking>
             <Debugging>
               <GenerateDebugInfo Value="False"/>
+              <DebugInfoType Value="dsDwarf3"/>
             </Debugging>
-            <LinkSmart Value="True"/>
             <Options>
               <Win32>
                 <GraphicApplication Value="True"/>
@@ -125,39 +130,7 @@
           </Linking>
         </CompilerOptions>
       </Item4>
-      <Item5 Name="Release-Win32">
-        <CompilerOptions>
-          <Version Value="11"/>
-          <Target>
-            <Filename Value="LazScope-$(TargetCPU)-$(TargetOS)"/>
-          </Target>
-          <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../shared"/>
-            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
-          </SearchPaths>
-          <CodeGeneration>
-            <SmartLinkUnit Value="True"/>
-            <TargetCPU Value="i386"/>
-            <TargetOS Value="win32"/>
-            <Optimizations>
-              <OptimizationLevel Value="3"/>
-            </Optimizations>
-          </CodeGeneration>
-          <Linking>
-            <Debugging>
-              <GenerateDebugInfo Value="False"/>
-            </Debugging>
-            <LinkSmart Value="True"/>
-            <Options>
-              <Win32>
-                <GraphicApplication Value="True"/>
-              </Win32>
-            </Options>
-          </Linking>
-        </CompilerOptions>
-      </Item5>
-      <Item6 Name="Release-Win64">
+      <Item5 Name="Release-Win64">
         <CompilerOptions>
           <Version Value="11"/>
           <Target>
@@ -188,6 +161,39 @@
             </Options>
           </Linking>
         </CompilerOptions>
+      </Item5>
+      <Item6 Name="Release-Win32">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="LazScope-$(TargetCPU)-$(TargetOS)"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../shared"/>
+            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+            <TargetCPU Value="i386"/>
+            <TargetOS Value="win32"/>
+            <Optimizations>
+              <OptimizationLevel Value="3"/>
+            </Optimizations>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <GenerateDebugInfo Value="False"/>
+              <DebugInfoType Value="dsDwarf3"/>
+            </Debugging>
+            <LinkSmart Value="True"/>
+            <Options>
+              <Win32>
+                <GraphicApplication Value="True"/>
+              </Win32>
+            </Options>
+          </Linking>
+        </CompilerOptions>
       </Item6>
     </BuildModes>
     <PublishOptions>
@@ -208,14 +214,13 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="27">
+    <Units Count="31">
       <Unit0>
         <Filename Value="LazScope.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
-        <CursorPos Y="18"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="16"/>
         <UsageCount Value="201"/>
-        <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="../unit1.pas"/>
@@ -225,7 +230,7 @@
         <UnitName Value="Unit1"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="34" Y="19"/>
-        <UsageCount Value="201"/>
+        <UsageCount Value="186"/>
       </Unit1>
       <Unit2>
         <Filename Value="maingui.pas"/>
@@ -233,13 +238,12 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mainGUI"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="332"/>
-        <CursorPos X="16" Y="337"/>
+        <TopLine Value="641"/>
+        <CursorPos X="34" Y="654"/>
         <UsageCount Value="101"/>
         <Bookmarks Count="2">
-          <Item0 X="3" Y="536" ID="2"/>
-          <Item1 X="3" Y="357" ID="1"/>
+          <Item0 X="46" Y="144" ID="2"/>
+          <Item1 X="14" Y="702" ID="1"/>
         </Bookmarks>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -249,7 +253,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="203"/>
         <CursorPos Y="221"/>
-        <UsageCount Value="148"/>
+        <UsageCount Value="133"/>
         <Bookmarks Count="2">
           <Item0 X="5" Y="1701" ID="1"/>
           <Item1 X="35" Y="1662" ID="2"/>
@@ -261,13 +265,16 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="31"/>
         <CursorPos X="3" Y="40"/>
-        <UsageCount Value="121"/>
+        <UsageCount Value="106"/>
       </Unit4>
       <Unit5>
         <Filename Value="serialthread.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="SerialThread"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
+        <TopLine Value="213"/>
+        <CursorPos X="12" Y="228"/>
         <UsageCount Value="201"/>
         <Loaded Value="True"/>
       </Unit5>
@@ -283,194 +290,304 @@
       <Unit7>
         <Filename Value="synaser7.005.002.patch"/>
         <CursorPos X="12" Y="11"/>
-        <UsageCount Value="126"/>
+        <UsageCount Value="111"/>
         <DefaultSyntaxHighlighter Value="None"/>
       </Unit7>
       <Unit8>
         <Filename Value="../shared/commands.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="46"/>
-        <CursorPos X="3" Y="55"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="45"/>
+        <CursorPos X="10" Y="59"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
-        <Filename Value="../../../fpc/3.0.4/packages/rtl-extra/src/unix/serial.pp"/>
-        <UnitName Value="Serial"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="22"/>
-        <UsageCount Value="5"/>
-      </Unit9>
-      <Unit10>
         <Filename Value="serialobject.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="66"/>
-        <CursorPos X="21" Y="66"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="280"/>
+        <CursorPos X="33" Y="294"/>
         <UsageCount Value="201"/>
-        <Loaded Value="True"/>
-      </Unit10>
-      <Unit11>
+      </Unit9>
+      <Unit10>
         <Filename Value="../../../fpc/3.0.4/rtl/objpas/classes/classesh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1674"/>
         <CursorPos X="21" Y="1682"/>
-        <UsageCount Value="58"/>
-      </Unit11>
-      <Unit12>
+        <UsageCount Value="43"/>
+      </Unit10>
+      <Unit11>
         <Filename Value="../../../fpc/3.0.4/rtl/inc/threadh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="164"/>
         <CursorPos X="11" Y="178"/>
-        <UsageCount Value="63"/>
-      </Unit12>
-      <Unit13>
+        <UsageCount Value="48"/>
+      </Unit11>
+      <Unit12>
         <Filename Value="../../../fpc/3.0.4/rtl/inc/thread.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="310"/>
         <CursorPos X="3" Y="313"/>
-        <UsageCount Value="63"/>
-      </Unit13>
-      <Unit14>
+        <UsageCount Value="48"/>
+      </Unit12>
+      <Unit13>
         <Filename Value="../../../fpc/3.2.0/packages/rtl-extra/src/unix/serial.pp"/>
         <UnitName Value="Serial"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="46"/>
         <CursorPos X="50" Y="45"/>
-        <UsageCount Value="87"/>
-      </Unit14>
-      <Unit15>
+        <UsageCount Value="72"/>
+      </Unit13>
+      <Unit14>
         <Filename Value="../../../fpc/3.2.0/rtl/unix/tthread.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="253"/>
         <CursorPos X="3" Y="255"/>
-        <UsageCount Value="29"/>
-      </Unit15>
-      <Unit16>
+        <UsageCount Value="14"/>
+      </Unit14>
+      <Unit15>
         <Filename Value="../../../fpc/3.2.0/rtl/unix/bunxovlh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="38"/>
         <CursorPos X="11" Y="52"/>
-        <UsageCount Value="70"/>
-      </Unit16>
-      <Unit17>
+        <UsageCount Value="55"/>
+      </Unit15>
+      <Unit16>
         <Filename Value="../../../fpc/3.2.0/rtl/unix/bunxovl.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="219"/>
         <CursorPos X="10" Y="223"/>
-        <UsageCount Value="70"/>
-      </Unit17>
-      <Unit18>
+        <UsageCount Value="55"/>
+      </Unit16>
+      <Unit17>
         <Filename Value="../../../fpc/3.2.0/rtl/linux/bunxsysc.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="442"/>
         <CursorPos X="10" Y="458"/>
-        <UsageCount Value="70"/>
-      </Unit18>
-      <Unit19>
+        <UsageCount Value="55"/>
+      </Unit17>
+      <Unit18>
         <Filename Value="../../../lazarus/2.0.12/lcl/forms.pp"/>
         <UnitName Value="Forms"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="63"/>
         <CursorPos X="3" Y="70"/>
-        <UsageCount Value="34"/>
-      </Unit19>
-      <Unit20>
+        <UsageCount Value="19"/>
+      </Unit18>
+      <Unit19>
         <Filename Value="../../../.fpc.cfg"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="110"/>
         <CursorPos X="2" Y="121"/>
-        <UsageCount Value="16"/>
+        <UsageCount Value="1"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit20>
-      <Unit21>
-        <Filename Value="../../../lazarus/2.0.12/lcl/interfaces/gtk2/gtk2disableliboverlay.pas"/>
-        <UnitName Value="gtk2DisableLibOverlay"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="4"/>
-        <CursorPos X="12" Y="11"/>
-        <UsageCount Value="5"/>
-      </Unit21>
-      <Unit22>
+      </Unit19>
+      <Unit20>
         <Filename Value="../firmware/sampler.lpr"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="295"/>
-        <CursorPos X="14" Y="296"/>
-        <UsageCount Value="38"/>
-      </Unit22>
-      <Unit23>
+        <TopLine Value="342"/>
+        <CursorPos X="24" Y="347"/>
+        <UsageCount Value="101"/>
+      </Unit20>
+      <Unit21>
         <Filename Value="../../../fpc/3.2.2/rtl/inc/thread.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="338"/>
         <CursorPos X="3" Y="342"/>
-        <UsageCount Value="93"/>
-      </Unit23>
-      <Unit24>
+        <UsageCount Value="78"/>
+      </Unit21>
+      <Unit22>
         <Filename Value="../firmware/samplesizecalc.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="37"/>
         <CursorPos X="70" Y="46"/>
-        <UsageCount Value="38"/>
-      </Unit24>
-      <Unit25>
+        <UsageCount Value="23"/>
+      </Unit22>
+      <Unit23>
         <Filename Value="../../../fpc/3.2.2/rtl/inc/systemh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1118"/>
         <CursorPos X="10" Y="1127"/>
-        <UsageCount Value="23"/>
+        <UsageCount Value="8"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="../../../fpc/3.2.2/rtl/unix/baseunix.pp"/>
+        <UnitName Value="BaseUnix"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="31"/>
+        <CursorPos X="12" Y="45"/>
+        <UsageCount Value="46"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="../../../fpc/3.2.2/rtl/linux/termios.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1184"/>
+        <CursorPos X="10" Y="1192"/>
+        <UsageCount Value="22"/>
       </Unit25>
       <Unit26>
-        <Filename Value="LazScope.lpi"/>
+        <Filename Value="../../../fpc/3.2.2/rtl/unix/termiosh.inc"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="531"/>
-        <UsageCount Value="10"/>
-        <DefaultSyntaxHighlighter Value="XML"/>
+        <TopLine Value="10"/>
+        <CursorPos X="11" Y="19"/>
+        <UsageCount Value="22"/>
       </Unit26>
+      <Unit27>
+        <Filename Value="../../../fpc/3.2.2/rtl/linux/termio.pp"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="19"/>
+        <CursorPos Y="35"/>
+        <UsageCount Value="21"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="../../../fpc/3.2.2/rtl/linux/termiosproc.inc"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="19" Y="10"/>
+        <UsageCount Value="21"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="../../../fpc/3.2.2/rtl/objpas/classes/classesh.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1751"/>
+        <CursorPos X="14" Y="1761"/>
+        <UsageCount Value="10"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="../../../fpc/3.2.2/rtl/unix/tthread.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="253"/>
+        <CursorPos X="3" Y="255"/>
+        <UsageCount Value="10"/>
+      </Unit30>
     </Units>
-    <JumpHistory Count="9" HistoryIndex="8">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="maingui.pas"/>
-        <Caret Line="370" TopLine="361"/>
+        <Caret Line="249" TopLine="236"/>
       </Position1>
       <Position2>
         <Filename Value="maingui.pas"/>
-        <Caret Line="372" TopLine="361"/>
+        <Caret Line="226" Column="23" TopLine="216"/>
       </Position2>
       <Position3>
         <Filename Value="maingui.pas"/>
-        <Caret Line="373" TopLine="361"/>
+        <Caret Line="220" Column="41" TopLine="216"/>
       </Position3>
       <Position4>
-        <Filename Value="maingui.pas"/>
-        <Caret Line="364" TopLine="349"/>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="37" Column="15" TopLine="28"/>
       </Position4>
       <Position5>
-        <Filename Value="maingui.pas"/>
-        <Caret Line="365" TopLine="350"/>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="153" Column="3" TopLine="148"/>
       </Position5>
       <Position6>
-        <Filename Value="maingui.pas"/>
-        <Caret Line="366" TopLine="351"/>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="35" Column="15" TopLine="30"/>
       </Position6>
       <Position7>
-        <Filename Value="maingui.pas"/>
-        <Caret Line="369" TopLine="360"/>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="112" Column="5" TopLine="97"/>
       </Position7>
       <Position8>
         <Filename Value="maingui.pas"/>
-        <Caret Line="89" Column="3" TopLine="78"/>
+        <Caret Line="225" Column="9" TopLine="218"/>
       </Position8>
       <Position9>
         <Filename Value="maingui.pas"/>
-        <Caret Line="72" Column="13" TopLine="69"/>
+        <Caret Line="549" TopLine="546"/>
       </Position9>
+      <Position10>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="327" Column="13" TopLine="319"/>
+      </Position10>
+      <Position11>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="79" Column="14" TopLine="72"/>
+      </Position11>
+      <Position12>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="654" Column="5" TopLine="643"/>
+      </Position12>
+      <Position13>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="50" Column="15" TopLine="41"/>
+      </Position13>
+      <Position14>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="227" Column="3" TopLine="213"/>
+      </Position14>
+      <Position15>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="24" Column="22" TopLine="15"/>
+      </Position15>
+      <Position16>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="49" Column="54" TopLine="34"/>
+      </Position16>
+      <Position17>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="175" Column="45" TopLine="160"/>
+      </Position17>
+      <Position18>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="184" TopLine="173"/>
+      </Position18>
+      <Position19>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="50" Column="15" TopLine="47"/>
+      </Position19>
+      <Position20>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="227" Column="3" TopLine="213"/>
+      </Position20>
+      <Position21>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="225" Column="48" TopLine="213"/>
+      </Position21>
+      <Position22>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="190" Column="66" TopLine="175"/>
+      </Position22>
+      <Position23>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="227" TopLine="213"/>
+      </Position23>
+      <Position24>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="654" Column="33" TopLine="643"/>
+      </Position24>
+      <Position25>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="79" Column="31" TopLine="71"/>
+      </Position25>
+      <Position26>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="295" Column="26" TopLine="281"/>
+      </Position26>
+      <Position27>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="303" Column="22" TopLine="288"/>
+      </Position27>
+      <Position28>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="327" Column="5" TopLine="317"/>
+      </Position28>
+      <Position29>
+        <Filename Value="maingui.pas"/>
+        <Caret Line="328" Column="27" TopLine="317"/>
+      </Position29>
+      <Position30>
+        <Filename Value="serialthread.pas"/>
+        <Caret Line="184" TopLine="176"/>
+      </Position30>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="LazScope-$(TargetCPU)-$(TargetOS)"/>
+      <Filename Value="LazScope"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
@@ -478,38 +595,30 @@
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <CodeGeneration>
-      <SmartLinkUnit Value="True"/>
       <Checks>
         <IOChecks Value="True"/>
         <RangeChecks Value="True"/>
         <OverflowChecks Value="True"/>
         <StackChecks Value="True"/>
       </Checks>
-      <TargetCPU Value="x86_64"/>
-      <TargetOS Value="linux"/>
     </CodeGeneration>
     <Linking>
       <Debugging>
         <DebugInfoType Value="dsDwarf3"/>
+        <UseHeaptrc Value="True"/>
+        <StripSymbols Value="True"/>
       </Debugging>
-      <LinkSmart Value="True"/>
       <Options>
         <Win32>
           <GraphicApplication Value="True"/>
         </Win32>
       </Options>
     </Linking>
-    <Other>
-      <ConfigFile>
-        <ConfigFilePath Value=""/>
-      </ConfigFile>
-    </Other>
   </CompilerOptions>
   <Debugging>
     <Watches Count="1">
       <Item1 RepeatCount="20">
-        <Expression Value="buf[bufsize-5]"/>
-        <DisplayStyle Value="wdfMemDump"/>
+        <Expression Value="buf"/>
       </Item1>
     </Watches>
     <Exceptions Count="4">

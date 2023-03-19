@@ -13,7 +13,7 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
-    ADCPortsList: TCheckGroup;
+    ADCchannelsList: TCheckGroup;
     ADCScalerSelector: TComboBox;
     ADCResolutionSelector: TComboBox;
     BaudEdit: TEdit;
@@ -42,8 +42,8 @@ type
     StatusBar1: TStatusBar;
     TriggerLevelEdit: TSpinEdit;
     TriggerOptionsRadioBox: TRadioGroup;
-    procedure ADCPortsListClick(Sender: TObject);
-    procedure ADCPortsListItemClick(Sender: TObject; Index: integer);
+    procedure ADCchannelsListClick(Sender: TObject);
+    procedure ADCchannelsListItemClick(Sender: TObject; Index: integer);
     procedure ADCResolutionSelectorChange(Sender: TObject);
     procedure ChartToolset1DataPointCrosshairTool1AfterKeyUp(ATool: TChartTool;
       APoint: TPoint);
@@ -75,10 +75,12 @@ type
     procedure Processdata;
     procedure Status(const s: string; stopRun: boolean);
     procedure DataWaiting(var Message: TLMessage); message WM_DataWaiting;
-    procedure CheckSelectedADCPorts;
+    procedure CheckSelectedADCchannels;
     function CloseSerialThread: boolean;
     procedure doConnected;
     procedure doDisconnected;
+    // Returns true on success
+    function waitForCmdReply: boolean;
   public
     { public declarations }
   end; 
@@ -116,9 +118,9 @@ begin
     AskForNewData := false;
 end;
 
-procedure TForm1.ADCPortsListItemClick(Sender: TObject; Index: integer);
+procedure TForm1.ADCchannelsListItemClick(Sender: TObject; Index: integer);
 begin
-  CheckSelectedADCPorts;
+  CheckSelectedADCchannels;
 end;
 
 procedure TForm1.ADCResolutionSelectorChange(Sender: TObject);
@@ -175,7 +177,7 @@ procedure TForm1.connectButtonClick(Sender: TObject);
 var
   cmd: byte;
   baud, i: integer;
-  err: boolean;
+  OK: boolean;
 begin
   if not connected then
   begin
@@ -190,95 +192,102 @@ begin
         SerialThread.OnErrorNotify := @self.Status;
       end;
 
-      err := false;
+      // Check if device responds correctly to echo
       SerialThread.SetCommand(cmdEcho);
-      i := 0;
-      repeat
-        Sleep(10);
-        Application.ProcessMessages;
-        inc(i);
-      until (SerialThread.SerialReturnValue > 0) or (i > 100);
-      err := (SerialThread.SerialReturnValue <> cmdEcho);
+      OK := waitForCmdReply and (SerialThread.SerialReturnValue = cmdEcho);
 
-      if not err then
+      // Get size of data buffer
+      if OK then
       begin
         SerialThread.SerialReturnValue := 0;
-        SerialThread.SetCommand(cmdBufferSize);
-        i := 0;
-        repeat
-          Sleep(10);
-          Application.ProcessMessages;
-          inc(i);
-        until (SerialThread.SerialReturnValue > 0) or (i > 100);
-        err := SerialThread.SerialReturnValue = 0;
-      end;
-
-      if not err then
-      begin
-        bufsize := SerialThread.SerialReturnValue;
-        SetLength(buf, bufsize);
-
-        ADCScalerSelector.ItemIndex := 3;
-        cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
-        SerialThread.SetCommand(cmd);
-
-        SerialThread.SerialReturnValue := 0;
-        SerialThread.SetCommand(cmdADCPins);
-        i := 0;
-        repeat
-          Sleep(10);
-          Application.ProcessMessages;
-          inc(i)
-        until (SerialThread.SerialReturnValue > 0) or (i > 100);
-        err := SerialThread.SerialReturnValue = 0;
-      end;
-
-      if not err then
-      begin
-        ADCPortsList.Items.Clear;
-        cmd := SerialThread.SerialReturnValue;
-        for i := 0 to 7 do
+        SerialThread.SetCommand(cmdGetBufferSize);
+        OK := waitForCmdReply and (SerialThread.SerialReturnValue > 0);
+        if OK then
         begin
-          if (cmd and (1 shl i)) > 0 then
-            ADCPortsList.Items.Add(IntToStr(i));
+          bufsize := SerialThread.SerialReturnValue;
+          SetLength(buf, bufsize);
         end;
-
-        // Sync ADC prescaler with Arduino
-        ADCPortsList.Checked[0] := true;
-        CheckSelectedADCPorts;
       end;
 
-      if not err then
+      // Configure default prescaler setting
+      if OK then
+      begin
+        ADCScalerSelector.ItemIndex := 3;
+        cmd := cmdSetADCDiv2 + ADCScalerSelector.ItemIndex;
+        SerialThread.SetCommand(cmd);
+      end;
+
+      // Check if controller supports 2.56V internal reference
+      if OK then
+      begin
+        SerialThread.SetCommand(cmdGetADCVoltage_2_56);
+        OK := waitForCmdReply;
+        if OK and (SerialThread.SerialReturnValue = cmdHasADCVoltage_2_56) then
+        begin
+          if ReferenceVoltageSelector.Items.Count < 4 then
+            ReferenceVoltageSelector.Items.Add('2.56V');
+        end
+        else
+        begin
+          if ReferenceVoltageSelector.Items.Count > 3 then
+          begin
+            i := ReferenceVoltageSelector.ItemIndex;
+            ReferenceVoltageSelector.Items.Delete(ReferenceVoltageSelector.Items.Count-1);
+            // Preserve previous item, unless it was the last item just deleted
+            if i < ReferenceVoltageSelector.Items.Count then
+              ReferenceVoltageSelector.ItemIndex := i
+            else
+              ReferenceVoltageSelector.ItemIndex := 0;
+          end;
+        end;
+      end;
+
+      // Configure ADC channels
+      if OK then
+      begin
+        SerialThread.SerialReturnValue := 0;
+        SerialThread.SetCommand(cmdListADCchannels);
+        OK := waitForCmdReply and (SerialThread.SerialReturnValue > 0);
+        if OK then
+        begin
+          ADCchannelsList.Items.Clear;
+          cmd := SerialThread.SerialReturnValue;
+          for i := 0 to 7 do
+          begin
+            if (cmd and (1 shl i)) > 0 then
+              ADCchannelsList.Items.Add(IntToStr(i));
+          end;
+
+          // Sync ADC prescaler with Arduino
+          ADCchannelsList.Checked[0] := true;
+          CheckSelectedADCchannels;
+        end;
+      end;
+
+      // Configure supported data resolutions
+      if OK then
       begin
         SerialThread.SerialReturnValue := 0;
         SerialThread.SetCommand(cmdListResolutions);
-        i := 0;
-        repeat
-          Sleep(10);
-          Application.ProcessMessages;
-          inc(i);
-        until (SerialThread.SerialReturnValue > 0) or (i > 100);
-        err := (SerialThread.SerialReturnValue and 3) = 0;
-      end;
+        OK := waitForCmdReply and ((SerialThread.SerialReturnValue and 3) > 0);
+        if OK then
+        begin
+          ADCResolutionSelector.Items.Clear;
+          i := SerialThread.SerialReturnValue;
+          if (i and 1) = 1 then
+            ADCResolutionSelector.Items.Add('8 bit');
+          if (i and 2) = 2 then
+            ADCResolutionSelector.Items.Add('10 bit');
 
-      if not err then
-      begin
-        i := SerialThread.SerialReturnValue;
+          // Default to lower resolution
+          ADCResolutionSelector.ItemIndex := 0;
+          ADCResolutionSelectorChange(nil);
 
-        ADCResolutionSelector.Items.Clear;
-        if (i and 1) = 1 then
-          ADCResolutionSelector.Items.Add('8 bit');
-        if (i and 2) = 2 then
-          ADCResolutionSelector.Items.Add('10 bit');
-
-        // Default to lower resolution
-        ADCResolutionSelector.ItemIndex := 0;
-        ADCResolutionSelectorChange(nil);
-
-        // Sync ADC trigger with GUI
-        TriggerOptionsRadioBoxClick(nil);
-        doConnected;
-        connected := true;
+          // Sync ADC trigger with GUI
+          TriggerOptionsRadioBoxClick(nil);
+          doConnected;
+          connected := true;
+        end;
       end
       else
       begin
@@ -307,9 +316,9 @@ begin
   singleShot :=  SingleShotCheck.Checked;
 end;
 
-procedure TForm1.ADCPortsListClick(Sender: TObject);
+procedure TForm1.ADCchannelsListClick(Sender: TObject);
 begin
-  CheckSelectedADCPorts;
+  CheckSelectedADCchannels;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -346,7 +355,7 @@ procedure TForm1.FrameWidthSelectorClick(Sender: TObject);
 var
   cmd: byte;
 begin
-  cmd := cmdADCDiv2 + ADCScalerSelector.ItemIndex;
+  cmd := cmdSetADCDiv2 + ADCScalerSelector.ItemIndex;
   SerialThread.SetCommand(cmd);
 end;
 
@@ -355,7 +364,7 @@ procedure TForm1.ReferenceVoltageSelectorChange(Sender: TObject);
 var
   cmd: byte;
 begin
-  cmd := cmdADCVoltage_VCC + byte(ReferenceVoltageSelector.ItemIndex);
+  cmd := cmdSetADCVoltage_VCC + byte(ReferenceVoltageSelector.ItemIndex);
   SerialThread.SetCommand(cmd);
 end;
 
@@ -582,7 +591,7 @@ begin
   StatusBar1.Panels[5].Text := FloatToStrF(epTimer.Elapsed(localtimedata)*1000, ffGeneral, 4, 3);
 end;
 
-procedure TForm1.CheckSelectedADCPorts;
+procedure TForm1.CheckSelectedADCchannels;
 var
   i, offset: integer;
   PortsSelected: byte;
@@ -593,13 +602,13 @@ begin
   numPortsSelected := 0;
   sl := TStringList.Create;
 
-  offset := StrToInt(ADCPortsList.Items[0]);
-  for i := 0 to ADCPortsList.Items.Count-1 do
-    if ADCPortsList.Checked[i] then
+  offset := StrToInt(ADCchannelsList.Items[0]);
+  for i := 0 to ADCchannelsList.Items.Count-1 do
+    if ADCchannelsList.Checked[i] then
     begin
       PortsSelected := PortsSelected + (1 shl (i+offset));
       inc(numPortsSelected);
-      sl.Add(copy(ADCPortsList.Items[i], 1, 2));
+      sl.Add(copy(ADCchannelsList.Items[i], 1, 2));
     end;
 
   // Same number of series & ports
@@ -622,7 +631,7 @@ begin
 
   sl.free;
 
-  SerialThread.SetCommand(cmdSelectPorts);
+  SerialThread.SetCommand(cmdSetActiveADCchannels);
   SerialThread.SetCommand(PortsSelected);
 end;
 
@@ -657,7 +666,7 @@ begin
   AskForNewData := false;
   SingleShotCheck.Enabled := true;
   ADCScalerSelector.Enabled := true;
-  ADCPortsList.Enabled := true;
+  ADCchannelsList.Enabled := true;
   ReferenceVoltageSelector.Enabled := true;
   TriggerOptionsRadioBox.Enabled := true;
   TriggerLevelEdit.Enabled := true;
@@ -672,7 +681,7 @@ begin
   RunningCheck.Enabled := false;
   SingleShotCheck.Enabled := false;
   ADCScalerSelector.Enabled := false;
-  ADCPortsList.Enabled := false;
+  ADCchannelsList.Enabled := false;
   ReferenceVoltageSelector.Enabled := false;
   TriggerOptionsRadioBox.Enabled := false;
   TriggerLevelEdit.Enabled := false;
@@ -680,6 +689,19 @@ begin
   BaudEdit.Enabled := true;
   connectButton.Caption := 'Connect';
   Status('Disconnected', true);
+end;
+
+function TForm1.waitForCmdReply: boolean;
+var
+  i: integer;
+begin
+  i := 0;
+  repeat
+    Sleep(10);
+    Application.ProcessMessages;
+    inc(i);
+  until (SerialThread.SerialReturnValue > 0) or (i > 100);
+  Result := i < 100;
 end;
 
 end.

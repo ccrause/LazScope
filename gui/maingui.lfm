@@ -9,7 +9,7 @@ object Form1: TForm1
   OnClose = FormClose
   OnShow = FormShow
   Position = poDesktopCenter
-  LCLVersion = '2.2.4.0'
+  LCLVersion = '2.2.6.0'
   Visible = True
   object Chart1: TChart
     Left = 0
@@ -204,13 +204,13 @@ object Form1: TForm1
       Caption = 'Trigger level'
       ParentColor = False
     end
-    object ADCPortsList: TCheckGroup
+    object ADCchannelsList: TCheckGroup
       Left = 4
       Height = 128
       Top = 336
       Width = 220
       AutoFill = True
-      Caption = 'ADC pins'
+      Caption = 'ADC channels'
       ChildSizing.LeftRightSpacing = 6
       ChildSizing.TopBottomSpacing = 6
       ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
@@ -231,8 +231,8 @@ object Form1: TForm1
         'A4'
         'A5'
       )
-      OnClick = ADCPortsListClick
-      OnItemClick = ADCPortsListItemClick
+      OnClick = ADCchannelsListClick
+      OnItemClick = ADCchannelsListItemClick
       TabOrder = 6
       Data = {
         06000000020202020202
@@ -299,7 +299,7 @@ object Form1: TForm1
       Width = 69
       Enabled = False
       Increment = 4
-      MaxValue = 1024
+      MaxValue = 1020
       OnChange = TriggerOptionsRadioBoxClick
       TabOrder = 9
       Value = 512

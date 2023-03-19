@@ -10,6 +10,10 @@ const
   ADCVoltageVcc  = {$ifdef CPUAVR5}4{$else}0{$endif} shl 4;
   ADCVoltage1_1  = {$ifdef CPUAVR5}12{$else}8{$endif} shl 4;
   ADCVoltageARev = {$ifdef CPUAVR5}0{$else}4{$endif} shl 4;
+  // The 2.56V internal reference is only available on the attinyx5 series
+  {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
+  ADCVoltage2_56 = 9 shl 4;
+  {$endif}
 
   // ADLAR bit in ADCMUX hi nibble
   ADCleftAdjust = {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}2 shl 4
@@ -348,10 +352,10 @@ begin
   // This is handled by transmitting the cmd variable at the end of this procedure
   case cmd of
     // ADC pins (PC0..PC5 for atmega328p, PB1..PB3 for attiny}
-    cmdADCPins: cmd := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
+    cmdListADCchannels: cmd := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
                        %00111111{$else}%00001100{$endif};
     // Read the selected ports for ADC
-    cmdSelectPorts:
+    cmdSetActiveADCchannels:
       begin
         uartTransmit(cmd);
         cmd := uartReceive();
@@ -367,33 +371,45 @@ begin
       end;
 
     // ADC prescaler selection
-    cmdADCDiv2  : ADCSRA := $81;
-    cmdADCDiv4  : ADCSRA := $82;
-    cmdADCDiv8  : ADCSRA := $83;
-    cmdADCDiv16 : ADCSRA := $84;
-    cmdADCDiv32 : ADCSRA := $85;
-    cmdADCDiv64 : ADCSRA := $86;
-    cmdADCDiv128: ADCSRA := $87;
+    cmdSetADCDiv2  : ADCSRA := $81;
+    cmdSetADCDiv4  : ADCSRA := $82;
+    cmdSetADCDiv8  : ADCSRA := $83;
+    cmdSetADCDiv16 : ADCSRA := $84;
+    cmdSetADCDiv32 : ADCSRA := $85;
+    cmdSetADCDiv64 : ADCSRA := $86;
+    cmdSetADCDiv128: ADCSRA := $87;
 
    // Reference voltage
-    cmdADCVoltage_VCC:
+   {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
+   cmdGetADCVoltage_2_56:
+     begin
+       cmd := cmdHasADCVoltage_2_56;
+     end;
+   {$endif}
+    cmdSetADCVoltage_VCC:
       begin
         ADMUXhiMask := ADCVoltageVcc;  // Vcc
         updateADMUXVector();
       end;
-    cmdADCVoltage_1_1:
+    cmdSetADCVoltage_1_1:
       begin
-        ADMUXhiMask := ADCVoltage1_1;  // 1.1 V
+        ADMUXhiMask := ADCVoltage1_1;  // 1.1V internal reference
         updateADMUXVector();
       end;
-    cmdADCVoltage_AREF:
+    cmdSetADCVoltage_AREF:
       begin
         ADMUXhiMask := ADCVoltageARev;// Aref pin
         updateADMUXVector();
       end;
-
+    {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
+    cmdSetADCVoltage_2_56:
+      begin
+        ADMUXhiMask := ADCVoltage2_56;// 2.56V internal reference
+        updateADMUXVector();
+      end;
+    {$endif}
     // Return number of samples in buffer
-    cmdBufferSize:
+    cmdGetBufferSize:
       begin
         uartTransmit(byte(BufferSize and $FF));  // LSB
         cmd := (BufferSize shr 8);
