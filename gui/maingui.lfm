@@ -6,6 +6,7 @@ object Form1: TForm1
   Caption = 'Lazarus Oscilloscope'
   ClientHeight = 541
   ClientWidth = 1050
+  FormStyle = fsStayOnTop
   OnClose = FormClose
   OnShow = FormShow
   Position = poDesktopCenter
@@ -23,6 +24,8 @@ object Form1: TForm1
         Marks.OverlapPolicy = opHideNeighbour
         Minors = <>
         Title.LabelFont.Orientation = 900
+        Title.Visible = True
+        Title.Caption = 'ADC counts'
         Title.LabelBrush.Style = bsClear
       end    
       item
@@ -317,6 +320,7 @@ object Form1: TForm1
       Height = 27
       Top = 475
       Width = 82
+      Enabled = False
       ItemHeight = 0
       OnChange = ADCResolutionSelectorChange
       TabOrder = 10

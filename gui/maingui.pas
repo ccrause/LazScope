@@ -81,6 +81,7 @@ type
     procedure doDisconnected;
     // Returns true on success
     function waitForCmdReply: boolean;
+    procedure updateTriggerLimits;
   public
     { public declarations }
   end; 
@@ -129,20 +130,12 @@ var
 begin
   s := ADCResolutionSelector.Items[ADCResolutionSelector.ItemIndex];
   if s = '8 bit' then
-  begin
-    SerialThread.SetCommand(cmdSet8bit);
-    if TriggerLevelEdit.Value > 252 then
-    begin
-      TriggerLevelEdit.MaxValue := 252;
-      TriggerLevelEdit.Value := 252;
-      TriggerOptionsRadioBoxClick(nil);
-    end;
-  end
+    SerialThread.SetCommand(cmdSet8bit)
   else if s = '10 bit' then
-  begin
-    TriggerLevelEdit.MaxValue := 1020;
     SerialThread.SetCommand(cmdSet10bit);
-  end;
+
+  updateTriggerLimits;
+  TriggerOptionsRadioBoxClick(nil);
 end;
 
 procedure TForm1.ChartToolset1DataPointCrosshairTool1AfterKeyUp(
@@ -366,21 +359,46 @@ var
 begin
   cmd := cmdSetADCVoltage_VCC + byte(ReferenceVoltageSelector.ItemIndex);
   SerialThread.SetCommand(cmd);
+
+  updateTriggerLimits;
+  TriggerOptionsRadioBoxClick(nil);
 end;
 
 procedure TForm1.TriggerOptionsRadioBoxClick(Sender: TObject);
 var
   val: byte;
+  rawVal: integer;
+  s: string;
 begin
+  rawVal := TriggerLevelEdit.Value;
+  s := ADCResolutionSelector.Text;
+  // Scale trigger value from mV to ADC count
+  if ReferenceVoltageSelector.ItemIndex = 1 then
+  begin
+    // Max = 1020 mV
+    if s = '8 bit' then
+      val := rawVal shr 4
+    else
+      val := rawVal shr 2;
+  end
+  else if ReferenceVoltageSelector.ItemIndex = 3 then
+  begin
+    // Max = 2550 mV
+    if s = '8 bit' then
+      val := rawVal div 40
+    else
+      val := rawVal div 10;
+  end
+  else
+    val := rawVal shr 2;
+
   case TriggerOptionsRadioBox.ItemIndex of
   1: begin
        SerialThread.SetCommand(cmdTriggerRising);
-       val := TriggerLevelEdit.Value shr 2;
        SerialThread.SetCommand(val);
      end;
   2: begin
        SerialThread.SetCommand(cmdTriggerFalling);
-       val := TriggerLevelEdit.Value shr 2;
        SerialThread.SetCommand(val);
      end;
   else
@@ -452,9 +470,15 @@ begin
   end;
 
   if Vref = 0 then
-    Chart1.Extent.YMax := yscale + 1
+  begin
+    Chart1.LeftAxis.Title.Caption := 'ADC counts';
+    Chart1.Extent.YMax := yscale + 1;
+  end
   else
+  begin
+    Chart1.LeftAxis.Title.Caption := 'Millivolt';
     Chart1.Extent.YMax := Vref;
+  end;
 
   SetLength(data, numsamples);
 
@@ -667,6 +691,7 @@ begin
   SingleShotCheck.Enabled := true;
   ADCScalerSelector.Enabled := true;
   ADCchannelsList.Enabled := true;
+  ADCResolutionSelector.Enabled := true;
   ReferenceVoltageSelector.Enabled := true;
   TriggerOptionsRadioBox.Enabled := true;
   TriggerLevelEdit.Enabled := true;
@@ -682,6 +707,7 @@ begin
   SingleShotCheck.Enabled := false;
   ADCScalerSelector.Enabled := false;
   ADCchannelsList.Enabled := false;
+  ADCResolutionSelector.Enabled := false;
   ReferenceVoltageSelector.Enabled := false;
   TriggerOptionsRadioBox.Enabled := false;
   TriggerLevelEdit.Enabled := false;
@@ -702,6 +728,48 @@ begin
     inc(i);
   until (SerialThread.SerialReturnValue > 0) or (i > 100);
   Result := i < 100;
+end;
+
+procedure TForm1.updateTriggerLimits;
+var
+  s: string;
+  oldVal, oldMax: integer;
+begin
+  oldVal := TriggerLevelEdit.Value;
+  oldMax := TriggerLevelEdit.MaxValue;
+  // If reference is in mV, trigger max should also be in mV
+  if ReferenceVoltageSelector.ItemIndex in [1, 3] then
+  begin
+    if ReferenceVoltageSelector.ItemIndex = 1 then
+    begin
+      TriggerLevelEdit.MaxValue := 1020; // mV
+      TriggerLevelEdit.Increment := 4;
+    end
+    else
+    begin
+      TriggerLevelEdit.MaxValue := 2550; // mV
+      TriggerLevelEdit.Increment := 10;
+    end;
+  end
+  else
+  begin
+    s := ADCResolutionSelector.Items[ADCResolutionSelector.ItemIndex];
+    if s = '8 bit' then
+    begin
+      TriggerLevelEdit.MaxValue := 252; // ADC counts
+      TriggerLevelEdit.Increment := 4;
+    end
+    else if s = '10 bit' then
+    begin
+      TriggerLevelEdit.MaxValue := 1020; // ADC counts
+      TriggerLevelEdit.Increment := 4;
+    end;
+  end;
+
+  // Update trigger value to maintain approximately the same ratio of the scale
+  // if the scale changed
+  if oldMax <> TriggerLevelEdit.MaxValue then
+    TriggerLevelEdit.Value := round(oldVal/oldMax * TriggerLevelEdit.MaxValue);
 end;
 
 end.
