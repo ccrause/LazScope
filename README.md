@@ -56,9 +56,9 @@ attinyx5 | PB2 | PB1 | PB0
 ## Examples
 ### Middle C note
 A middle C note (261.6 Hz) sinusoidal wave captured from a headphone output jack using a [DC offset circuit](images/DC offset circuit.png):
-![](images/Middle C note LazScope.png)
+![](images/Middle_C_note_LazScope.png)
 The same waveform captured with a Rigol DS1102E oscilloscope for reference:
-![](images/Middle C note Rigol.png)
+![](images/Middle_C_note_Rigol.png)
 
 ### Infrared remote signal
 A capture of the power button on an LG 6711R1P070B remote controle using a cheap infrared demodulator. Note that the signal logic is reversed, that is a high value indicates no signal from the IR transmitter.
