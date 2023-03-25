@@ -188,6 +188,7 @@ end;
 constructor TSerialInterface.Create(fSerialPortName: string; fBaudRate: integer);
 begin
   inherited Create(false);
+  FreeOnTerminate := false;  // Requires FreeAndNil call in mainGUI.CloseSerialThread
   System.InitCriticalSection(rcSection);
   FDone := false;
   SerialReturnValue := 0;

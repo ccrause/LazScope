@@ -676,8 +676,7 @@ begin
       dec(timeout);
     end;
     Result := SerialThread.Done;
-    if not Result then
-      FreeAndNil(SerialThread);
+    FreeAndNil(SerialThread);
   end
   else
     Result := true;
