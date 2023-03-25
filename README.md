@@ -54,14 +54,13 @@ attinyx4 | PB2 | PB1 | PA7
 attinyx5 | PB2 | PB1 | PB0
 
 ## Examples
-Some signals were generated on a signal generator similar to this one (https://scienceprog.com/avr-dds-signal-generator-v20/)
+### Middle C note
+A middle C note (261.6 Hz) sinusoidal wave captured from a headphone output jack using a [DC offset circuit](images/DC offset circuit.png):
+![](images/Middle C note LazScope.png)
+The same waveform captured with a Rigol DS1102E oscilloscope for reference:
+![](images/Middle C note Rigol.png)
 
-### 50 Hz sine wave + 500 Hz square wave sampled at x32 prescaler
-A decent quality trace of the two signals.
-![](images/50Hz_sine_500Hz_squarex32.png)
-
-### 50 Hz sine wave + 500 Hz square wave sampled at x8 prescaler
-A poor quality trace caused by to high a sampling frequency. At too high sampling frequencies the ADC charge capacitor cannot be fully charged/discharged between sample cycles, leading to smearing of samples.  In this case the alternating sampling caused channel A0 to affect A1's reading and visa versa.
-![](images/50Hz_sine_500Hz_squarex8.png)
-
+### Infrared remote signal
+A capture of the power button on an LG 6711R1P070B remote controle using a cheap infrared demodulator. Note that the signal logic is reversed, that is a high value indicates no signal from the IR transmitter.
+![](images/LG_remote_trace_power_button.png)
 
