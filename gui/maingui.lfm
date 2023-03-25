@@ -3,7 +3,7 @@ object Form1: TForm1
   Height = 541
   Top = 120
   Width = 1050
-  Caption = 'Lazarus Oscilloscope'
+  Caption = 'Lazarus Oscilloscope v0.2'
   ClientHeight = 541
   ClientWidth = 1050
   OnClose = FormClose
