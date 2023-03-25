@@ -6,7 +6,6 @@ object Form1: TForm1
   Caption = 'Lazarus Oscilloscope'
   ClientHeight = 541
   ClientWidth = 1050
-  FormStyle = fsStayOnTop
   OnClose = FormClose
   OnShow = FormShow
   Position = poDesktopCenter
@@ -322,7 +321,7 @@ object Form1: TForm1
       Width = 82
       Enabled = False
       ItemHeight = 0
-      OnChange = ADCResolutionSelectorChange
+      OnSelect = ADCResolutionSelectorChange
       TabOrder = 10
     end
   end

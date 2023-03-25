@@ -475,7 +475,7 @@ begin
   end
   else
   begin
-    Chart1.LeftAxis.Title.Caption := 'Millivolt';
+    Chart1.LeftAxis.Title.Caption := 'mV';
     Chart1.Extent.YMax := Vref;
   end;
 
