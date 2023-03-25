@@ -373,25 +373,23 @@ var
 begin
   rawVal := TriggerLevelEdit.Value;
   s := ADCResolutionSelector.Text;
-  // Scale trigger value from mV to ADC count
+  // Scale trigger value from mV to ADC counts
   if ReferenceVoltageSelector.ItemIndex = 1 then
   begin
-    // Max = 1020 mV
     if s = '8 bit' then
-      val := rawVal shr 4
+      rawVal := round(rawVal / 1100 * 255)
     else
-      val := rawVal shr 2;
+      rawVal := round(rawVal / 1100 * 1023);
   end
   else if ReferenceVoltageSelector.ItemIndex = 3 then
   begin
-    // Max = 2550 mV
     if s = '8 bit' then
-      val := rawVal div 40
+      rawVal := round(rawVal / 2560 * 255)
     else
-      val := rawVal div 10;
-  end
-  else
-    val := rawVal shr 2;
+      rawVal := round(rawVal / 2560 * 1023);
+  end;
+
+  val := rawVal shr 2;
 
   case TriggerOptionsRadioBox.ItemIndex of
   1: begin
@@ -486,7 +484,7 @@ begin
   if tenBitData then
     for i := 0 to length(data)-1 do
     begin
-      j := 3*(i shr 1) + (i mod 2) + 2; // 2 is data starting offset into buffer
+      j := 3*(i shr 1) + (i mod 2) + dataOffset; // 2 is data starting offset into buffer
 
       h := buf[j];
       l := buf[j+1];
