@@ -55,7 +55,7 @@ attinyx5 | PB2 | PB1 | PB0
 
 ## Examples
 ### Middle C note
-A middle C note (261.6 Hz) sinusoidal wave captured from a headphone output jack using a [DC offset circuit](images/DC offset circuit.png):
+A middle C note (261.6 Hz) sinusoidal wave captured from a headphone output jack using a [DC offset circuit](images/DC_offset_circuit.png):
 ![](images/Middle_C_note_LazScope.png)
 The same waveform captured with a Rigol DS1102E oscilloscope for reference:
 ![](images/Middle_C_note_Rigol.png)
