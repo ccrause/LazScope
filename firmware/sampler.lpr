@@ -310,7 +310,7 @@ begin
   ADCSRA := $86;
   ADMUXhiMask := ADCVoltageVcc; // Vcc + left adjust
 
-  // Set up A0 as default selected channels
+  // Set up A0/A2 as default selected channels
   ADMUXVector[0] := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
                  0 {$else} 2 {$endif};  // on attiny ADC0 is on reset pin, so generally not used
   numChannels := 1;
@@ -319,7 +319,6 @@ begin
   // Disable digital input on all input analog pins to save power
   DIDR0 := {$if defined(CPUAVR5) or defined(FPC_MCU_ATTINY24) or defined(FPC_MCU_ATTINY44) or defined(FPC_MCU_ATTINY84)}
            63{$else}(1 shl ADC2D) or (1 shl ADC3D){$endif};
-  //triggerCheck := nil;
 
   // Setup timer2 PWM on PD3 / D3 @ 0.5 kHz
   {$if defined(CPUAVR5) }
@@ -388,23 +387,23 @@ begin
    {$endif}
     cmdSetADCVoltage_VCC:
       begin
-        ADMUXhiMask := ADCVoltageVcc;  // Vcc
+        ADMUXhiMask := (ADMUXhiMask and ADCleftAdjust) or ADCVoltageVcc;  // Vcc
         updateADMUXVector();
       end;
     cmdSetADCVoltage_1_1:
       begin
-        ADMUXhiMask := ADCVoltage1_1;  // 1.1V internal reference
+        ADMUXhiMask := (ADMUXhiMask and ADCleftAdjust) or ADCVoltage1_1;  // 1.1V internal reference
         updateADMUXVector();
       end;
     cmdSetADCVoltage_AREF:
       begin
-        ADMUXhiMask := ADCVoltageARev;// Aref pin
+        ADMUXhiMask := (ADMUXhiMask and ADCleftAdjust) or ADCVoltageARev;// Aref pin
         updateADMUXVector();
       end;
     {$if defined(FPC_MCU_ATTINY25) or defined(FPC_MCU_ATTINY45) or defined(FPC_MCU_ATTINY85)}
     cmdSetADCVoltage_2_56:
       begin
-        ADMUXhiMask := ADCVoltage2_56;// 2.56V internal reference
+        ADMUXhiMask := (ADMUXhiMask and ADCleftAdjust) or ADCVoltage2_56;// 2.56V internal reference
         updateADMUXVector();
       end;
     {$endif}
