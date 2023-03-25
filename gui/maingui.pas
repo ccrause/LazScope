@@ -475,7 +475,7 @@ begin
   end
   else
   begin
-    Chart1.LeftAxis.Title.Caption := 'Millivolt';
+    Chart1.LeftAxis.Title.Caption := 'mV';
     Chart1.Extent.YMax := Vref;
   end;
 
@@ -484,7 +484,7 @@ begin
   if tenBitData then
     for i := 0 to length(data)-1 do
     begin
-      j := 3*(i shr 1) + (i mod 2) + dataOffset; // 2 is data starting offset into buffer
+      j := 3*(i shr 1) + (i mod 2) + dataOffset;
 
       h := buf[j];
       l := buf[j+1];
