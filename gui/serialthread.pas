@@ -77,6 +77,7 @@ var
   reply, v1, v2, i: byte;
   recv: integer;
 begin
+  SerialReturnValue := 0;
   recv := FSerial.Write(cmd);
   // Detect if there was an error
   if recv <= 0 then

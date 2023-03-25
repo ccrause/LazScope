@@ -189,30 +189,24 @@ begin
       SerialThread.SetCommand(cmdEcho);
       OK := waitForCmdReply and (SerialThread.SerialReturnValue = cmdEcho);
 
-      // Get size of data buffer
       if OK then
       begin
-        SerialThread.SerialReturnValue := 0;
-        SerialThread.SetCommand(cmdGetBufferSize);
-        OK := waitForCmdReply and (SerialThread.SerialReturnValue > 0);
-        if OK then
-        begin
-          bufsize := SerialThread.SerialReturnValue;
-          SetLength(buf, bufsize);
-        end;
-      end;
-
-      // Configure default prescaler setting
-      if OK then
-      begin
+        // Configure default prescaler setting
         ADCScalerSelector.ItemIndex := 3;
         cmd := cmdSetADCDiv2 + ADCScalerSelector.ItemIndex;
         SerialThread.SetCommand(cmd);
-      end;
 
-      // Check if controller supports 2.56V internal reference
-      if OK then
-      begin
+        // Select Vcc as default ADC reference voltage
+        ReferenceVoltageSelector.ItemIndex := 0;
+        cmd := cmdSetADCVoltage_VCC;
+        SerialThread.SetCommand(cmd);
+
+        // Set trigger off
+        TriggerOptionsRadioBox.ItemIndex := 0;
+        cmd := cmdTriggerOff;
+        SerialThread.SetCommand(cmd);
+
+        // Check if controller supports 2.56V internal reference
         SerialThread.SetCommand(cmdGetADCVoltage_2_56);
         OK := waitForCmdReply;
         if OK and (SerialThread.SerialReturnValue = cmdHasADCVoltage_2_56) then
@@ -235,10 +229,21 @@ begin
         end;
       end;
 
+      // Get size of data buffer
+      if OK then
+      begin
+        SerialThread.SetCommand(cmdGetBufferSize);
+        OK := waitForCmdReply and (SerialThread.SerialReturnValue > 0);
+        if OK then
+        begin
+          bufsize := SerialThread.SerialReturnValue;
+          SetLength(buf, bufsize);
+        end;
+      end;
+
       // Configure ADC channels
       if OK then
       begin
-        SerialThread.SerialReturnValue := 0;
         SerialThread.SetCommand(cmdListADCchannels);
         OK := waitForCmdReply and (SerialThread.SerialReturnValue > 0);
         if OK then
@@ -251,7 +256,7 @@ begin
               ADCchannelsList.Items.Add(IntToStr(i));
           end;
 
-          // Sync ADC prescaler with Arduino
+          // Sync ADC prescaler with controller
           ADCchannelsList.Checked[0] := true;
           CheckSelectedADCchannels;
         end;
@@ -260,7 +265,6 @@ begin
       // Configure supported data resolutions
       if OK then
       begin
-        SerialThread.SerialReturnValue := 0;
         SerialThread.SetCommand(cmdListResolutions);
         OK := waitForCmdReply and ((SerialThread.SerialReturnValue and 3) > 0);
         if OK then
@@ -272,12 +276,10 @@ begin
           if (i and 2) = 2 then
             ADCResolutionSelector.Items.Add('10 bit');
 
-          // Default to lower resolution
+          // Default to 8 bit resolution
           ADCResolutionSelector.ItemIndex := 0;
-          ADCResolutionSelectorChange(nil);
+          SerialThread.SetCommand(cmdSet8bit);
 
-          // Sync ADC trigger with GUI
-          TriggerOptionsRadioBoxClick(nil);
           doConnected;
           connected := true;
         end;
@@ -306,7 +308,7 @@ end;
 
 procedure TForm1.SingleShotCheckChange(Sender: TObject);
 begin
-  singleShot :=  SingleShotCheck.Checked;
+  singleShot := SingleShotCheck.Checked;
 end;
 
 procedure TForm1.ADCchannelsListClick(Sender: TObject);
@@ -333,7 +335,7 @@ begin
     epTimer.TimebaseSource:= HardwareTimebase;
 
   Chart1.Extent.YMin := 0;
-  Chart1.Extent.YMax := 1024;
+  Chart1.Extent.YMax := 512;
   Chart1.Extent.UseYMin := true;
   Chart1.Extent.UseYMax := true;
   Chart1.Extent.XMin := 0;
@@ -351,7 +353,6 @@ begin
   cmd := cmdSetADCDiv2 + ADCScalerSelector.ItemIndex;
   SerialThread.SetCommand(cmd);
 end;
-
 
 procedure TForm1.ReferenceVoltageSelectorChange(Sender: TObject);
 var
@@ -716,6 +717,8 @@ begin
   Status('Disconnected', true);
 end;
 
+// This function is only useful when waiting for command replies
+// Commands that only write settings return 0
 function TForm1.waitForCmdReply: boolean;
 var
   i: integer;
