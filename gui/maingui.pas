@@ -280,6 +280,9 @@ begin
           ADCResolutionSelector.ItemIndex := 0;
           SerialThread.SetCommand(cmdSet8bit);
 
+          // Reset trigger value
+          TriggerLevelEdit.Value := 128;
+
           doConnected;
           connected := true;
         end;
