@@ -1,6 +1,6 @@
 # LazScope
 FPC/Lazarus serial oscilloscope
-This oscilloscope project consists of two parts: a microcontroller that read analog signoals via its ADC peripheral, and an application that runs on a computer that requests data over a serial connection with the microcontroller.
+This oscilloscope project consists of two parts: a microcontroller that read analog signals via its ADC peripheral, and an application that runs on a computer that requests data over a serial connection with the microcontroller.
 
 ## Functionality
 ### Connection
