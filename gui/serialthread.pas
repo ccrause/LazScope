@@ -183,6 +183,7 @@ begin
       RTLeventWaitFor(FWaitingToProceed);
   end;
   FSerial.Free;
+  FCmdBuffer.Free;
   FDone := true;
 end;
 
