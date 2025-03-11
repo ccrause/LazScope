@@ -1,0 +1,3 @@
+[submodule "gui/metadarkstyle"]
+	path = gui/metadarkstyle
+	url = https://github.com/zamtmn/metadarkstyle
